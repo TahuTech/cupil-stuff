@@ -68,6 +68,9 @@ async function ambilSemua(koleksi: string, query: Record<string, string> = {}): 
 let cacheKatalog: Promise<{ kategori: Kategori[]; produk: Produk[] }> | null = null;
 
 export function ambilKatalog() {
+  // Saat `npm run dev` modul ini tetap hidup antar-request, jadi tanpa pengecualian ini
+  // perubahan di PocketBase baru terlihat setelah dev server di-restart.
+  if (import.meta.env.DEV) return muatKatalog();
   cacheKatalog ??= muatKatalog();
   return cacheKatalog;
 }

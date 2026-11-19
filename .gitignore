@@ -1,0 +1,16 @@
+# dependensi dan hasil build
+node_modules/
+dist/
+.astro/
+
+# rahasia
+.env
+.env.*
+!.env.example
+
+# data PocketBase (database, file lokal, types.d.ts hasil generate)
+pocketbase/pb_data/
+
+# lain-lain
+.DS_Store
+*.log

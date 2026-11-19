@@ -1,0 +1,89 @@
+---
+import { TOKO } from "../config";
+
+interface Props {
+  judul?: string;
+  deskripsi?: string;
+  gambar?: string;
+  pakai3D?: boolean;
+}
+const { judul, deskripsi = TOKO.tagline, gambar, pakai3D = false } = Astro.props;
+const judulLengkap = judul ? `${judul} · ${TOKO.nama}` : `${TOKO.nama} · ${TOKO.tagline}`;
+---
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{judulLengkap}</title>
+    <meta name="description" content={deskripsi} />
+    <meta property="og:title" content={judulLengkap} />
+    <meta property="og:description" content={deskripsi} />
+    {gambar && <meta property="og:image" content={gambar} />}
+    {pakai3D && (
+      <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/4.0.0/model-viewer.min.js"></script>
+    )}
+  </head>
+  <body>
+    <header class="topbar">
+      <a href="/" class="brand">{TOKO.nama}</a>
+      <nav>
+        <a href="/">Katalog</a>
+        <a href={`https://wa.me/${TOKO.nomorWA}`} target="_blank" rel="noopener">WhatsApp</a>
+      </nav>
+    </header>
+    <main>
+      <slot />
+    </main>
+    <footer>
+      <p>{TOKO.nama} · {TOKO.kota}</p>
+    </footer>
+  </body>
+</html>
+
+<style is:global>
+  :root {
+    --bg: #f6f5f2;
+    --card: #fff;
+    --text: #1d1d1f;
+    --muted: #6b6b70;
+    --accent: #1f6feb;
+    --wa: #25d366;
+    --line: #e4e2dd;
+    --habis: #b42318;
+    --radius: 14px;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.5;
+  }
+  a { color: inherit; }
+  img { max-width: 100%; display: block; }
+  main { max-width: 1100px; margin: 0 auto; padding: 0 20px 48px; }
+
+  .topbar {
+    max-width: 1100px; margin: 0 auto; padding: 16px 20px;
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .brand { font-weight: 700; font-size: 1.2rem; text-decoration: none; }
+  .topbar nav { display: flex; gap: 16px; }
+  .topbar nav a { text-decoration: none; color: var(--muted); }
+  .topbar nav a:hover { color: var(--text); }
+
+  footer { text-align: center; color: var(--muted); font-size: 0.9rem; padding: 24px; }
+
+  .kode { font-size: 0.75rem; font-weight: 700; color: var(--accent); letter-spacing: 0.04em; }
+  .harga { font-weight: 600; }
+  .badge { display: inline-block; font-size: 0.75rem; padding: 2px 8px; border-radius: 999px; background: #eee; }
+  .badge.habis { background: #fde8e7; color: var(--habis); }
+  .badge.preorder { background: #fff3cd; color: #7a5b00; }
+  .chip {
+    padding: 8px 14px; border-radius: 999px; border: 1px solid var(--line);
+    background: #fff; cursor: pointer; font-size: 0.9rem; color: var(--text);
+  }
+  .chip.aktif { background: var(--text); color: #fff; border-color: var(--text); }
+</style>

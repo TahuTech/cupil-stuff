@@ -1,0 +1,89 @@
+---
+import Base from "../layouts/Base.astro";
+import KartuProduk from "../components/KartuProduk.astro";
+import { ambilKatalog } from "../lib/pb";
+import { TOKO, LINI } from "../config";
+
+const { kategori, produk } = await ambilKatalog();
+// hanya kategori yang punya produk
+const dipakai = new Set(produk.map((p) => p.kategori?.slug).filter(Boolean));
+const kategoriTampil = kategori.filter((k) => dipakai.has(k.slug));
+const liniTampil = Object.keys(LINI).filter((l) => produk.some((p) => p.lini === l));
+---
+<Base>
+  <section class="hero">
+    <h1>{TOKO.nama}</h1>
+    <p>{TOKO.tagline}</p>
+  </section>
+
+  <div class="toolbar">
+    <input id="cari" type="search" placeholder="Cari kode atau nama produk…" aria-label="Cari produk" />
+    <div class="chips" id="filter-lini">
+      <button class="chip aktif" data-lini="">Semua</button>
+      {liniTampil.map((l) => <button class="chip" data-lini={l}>{LINI[l]}</button>)}
+    </div>
+    {kategoriTampil.length > 1 && (
+      <div class="chips" id="filter-kategori">
+        <button class="chip aktif" data-kategori="">Semua kategori</button>
+        {kategoriTampil.map((k) => <button class="chip" data-kategori={k.slug}>{k.nama}</button>)}
+      </div>
+    )}
+  </div>
+
+  <section class="grid" id="grid">
+    {produk.map((p) => <KartuProduk produk={p} />)}
+  </section>
+  <p class="kosong" id="kosong" hidden>Produk tidak ditemukan.</p>
+</Base>
+
+<script>
+  const cari = document.getElementById("cari") as HTMLInputElement;
+  const kartu = [...document.querySelectorAll<HTMLElement>("#grid .kartu")];
+  const kosong = document.getElementById("kosong")!;
+  let lini = "";
+  let kategori = "";
+
+  function saring() {
+    const q = cari.value.trim().toLowerCase();
+    let tampil = 0;
+    for (const k of kartu) {
+      const cocok =
+        (!lini || k.dataset.lini === lini) &&
+        (!kategori || k.dataset.kategori === kategori) &&
+        (!q || (k.dataset.cari ?? "").includes(q));
+      k.hidden = !cocok;
+      if (cocok) tampil++;
+    }
+    kosong.hidden = tampil > 0;
+  }
+
+  function pasangChip(idGrup: string, atur: (nilai: string) => void, atribut: string) {
+    const grup = document.getElementById(idGrup);
+    if (!grup) return;
+    grup.addEventListener("click", (e) => {
+      const tombol = (e.target as HTMLElement).closest("button");
+      if (!tombol) return;
+      grup.querySelectorAll("button").forEach((b) => b.classList.toggle("aktif", b === tombol));
+      atur(tombol.getAttribute(atribut) ?? "");
+      saring();
+    });
+  }
+
+  pasangChip("filter-lini", (v) => (lini = v), "data-lini");
+  pasangChip("filter-kategori", (v) => (kategori = v), "data-kategori");
+  cari.addEventListener("input", saring);
+</script>
+
+<style>
+  .hero { padding: 16px 0 8px; }
+  .hero h1 { margin: 0; font-size: 1.8rem; }
+  .hero p { margin: 4px 0 0; color: var(--muted); }
+  .toolbar { display: flex; flex-direction: column; gap: 10px; padding: 16px 0; }
+  .toolbar input {
+    padding: 10px 14px; border-radius: 999px; border: 1px solid var(--line);
+    font-size: 1rem; background: #fff; max-width: 420px;
+  }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; }
+  .grid { display: grid; gap: 16px; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); }
+  .kosong { text-align: center; color: var(--muted); padding: 40px; }
+</style>

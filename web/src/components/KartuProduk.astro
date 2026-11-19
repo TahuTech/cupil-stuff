@@ -1,0 +1,52 @@
+---
+import type { Produk } from "../lib/pb";
+import { rupiah } from "../lib/format";
+import { LINI } from "../config";
+
+interface Props { produk: Produk }
+const { produk: p } = Astro.props;
+const hargaTeks = p.hargaMin === p.hargaMax ? rupiah(p.hargaMin) : `${rupiah(p.hargaMin)} – ${rupiah(p.hargaMax)}`;
+const warnaTitik = p.warna.filter((w) => w.hex);
+---
+<a
+  class="kartu"
+  href={`/produk/${p.kode}`}
+  data-cari={`${p.kode} ${p.nama} ${p.kategori?.nama ?? ""}`.toLowerCase()}
+  data-lini={p.lini}
+  data-kategori={p.kategori?.slug ?? ""}
+>
+  <div class="thumb">
+    {p.foto[0]
+      ? <img src={p.foto[0]} alt={p.nama} loading="lazy" />
+      : <span class="tanpa-foto">{p.kode}</span>}
+    {p.model3d && <span class="tag-3d">3D</span>}
+  </div>
+  <div class="info">
+    <div class="kode">{p.kode} · {LINI[p.lini]}</div>
+    <h3>{p.nama}</h3>
+    <div class="harga">{hargaTeks}</div>
+    {!p.tersedia && <span class="badge habis">Stok habis</span>}
+    {warnaTitik.length > 0 && (
+      <div class="titik">{warnaTitik.map((w) => <span style={`background:${w.hex}`} title={w.nama}></span>)}</div>
+    )}
+  </div>
+</a>
+
+<style>
+  .kartu {
+    background: var(--card); border: 1px solid var(--line); border-radius: var(--radius);
+    overflow: hidden; text-decoration: none; transition: transform 0.15s, box-shadow 0.15s;
+  }
+  .kartu:hover { transform: translateY(-2px); box-shadow: 0 6px 18px rgba(0, 0, 0, 0.08); }
+  .thumb { aspect-ratio: 1; background: #efeeea; position: relative; display: grid; place-items: center; }
+  .thumb img { width: 100%; height: 100%; object-fit: cover; }
+  .tanpa-foto { color: var(--muted); font-weight: 600; }
+  .tag-3d {
+    position: absolute; top: 8px; left: 8px; background: var(--text); color: #fff;
+    font-size: 0.7rem; font-weight: 700; padding: 2px 8px; border-radius: 999px;
+  }
+  .info { padding: 12px 14px 14px; }
+  h3 { margin: 2px 0 4px; font-size: 1rem; }
+  .titik { display: flex; gap: 4px; margin-top: 8px; }
+  .titik span { width: 12px; height: 12px; border-radius: 50%; border: 1px solid rgba(0, 0, 0, 0.15); }
+</style>

@@ -1,0 +1,303 @@
+---
+import Base from "../../layouts/Base.astro";
+import { ambilKatalog, type Produk } from "../../lib/pb";
+import { rupiah, teksPolos } from "../../lib/format";
+import { TOKO, LINI } from "../../config";
+
+export async function getStaticPaths() {
+  const { produk } = await ambilKatalog();
+  return produk.map((p) => ({ params: { kode: p.kode }, props: { produk: p } }));
+}
+
+const { produk: p } = Astro.props as { produk: Produk };
+const v0 = p.varian.find((v) => v.stok > 0 || v.preorder) ?? p.varian[0];
+const fotoAwal = [...v0.foto, ...p.foto];
+const dataKlien = {
+  kode: p.kode,
+  nama: p.nama,
+  fotoProduk: p.foto,
+  varian: p.varian,
+  warna: p.warna,
+  bagianWarna: p.bagianWarna,
+  nomorWA: TOKO.nomorWA,
+  namaToko: TOKO.nama,
+};
+---
+<Base judul={p.nama} deskripsi={teksPolos(p.deskripsi) || `${p.nama} dari ${TOKO.nama}`} gambar={p.foto[0]} pakai3D={!!p.model3d}>
+  <a href="/" class="kembali">← Katalog</a>
+
+  <article class="produk">
+    <section class="media">
+      {p.model3d && (
+        <div class="tab" role="tablist">
+          <button class="chip aktif" data-tab="foto" role="tab">Foto</button>
+          <button class="chip" data-tab="3d" role="tab">3D</button>
+        </div>
+      )}
+
+      <div class="panel" data-panel="foto">
+        <div class="foto-utama">
+          {fotoAwal[0]
+            ? <img id="foto-utama" src={fotoAwal[0]} alt={p.nama} />
+            : <span class="tanpa-foto">Foto belum tersedia</span>}
+        </div>
+        <div class="foto-kecil" id="foto-kecil">
+          {fotoAwal.map((f, i) => (
+            <button class={i === 0 ? "aktif" : ""} data-src={f}><img src={f} alt="" loading="lazy" /></button>
+          ))}
+        </div>
+      </div>
+
+      {p.model3d && (
+        <div class="panel" data-panel="3d" hidden>
+          <model-viewer
+            id="viewer"
+            src={p.model3d}
+            camera-controls
+            auto-rotate
+            touch-action="pan-y"
+            shadow-intensity="1"
+            ar
+            ar-modes="webxr scene-viewer quick-look"
+            alt={`Model 3D ${p.nama}`}
+          ></model-viewer>
+          <p class="petunjuk">Geser untuk memutar · cubit atau scroll untuk zoom</p>
+        </div>
+      )}
+    </section>
+
+    <section class="detail">
+      <div class="kode">{p.kode} · {LINI[p.lini]}{p.kategori && ` · ${p.kategori.nama}`}</div>
+      <h1>{p.nama}</h1>
+      <div class="harga besar" id="harga">{rupiah(v0.harga)}</div>
+      <div id="status-stok"></div>
+
+      {p.varian.length > 1 && (
+        <div class="pilihan">
+          <div class="label">Varian</div>
+          <div class="opsi" id="opsi-varian">
+            {p.varian.map((v) => (
+              <button
+                class:list={["chip", { aktif: v.id === v0.id }]}
+                data-id={v.id}
+                disabled={v.stok <= 0 && !v.preorder}
+              >{v.nama}</button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {p.warna.length > 0 && (
+        <div class="pilihan">
+          <div class="label">Warna: <b id="nama-warna">{p.warna[0].nama}</b></div>
+          <div class="opsi" id="opsi-warna">
+            {p.warna.map((w, i) => (
+              <button
+                class:list={["swatch", { aktif: i === 0, asli: !w.hex }]}
+                style={w.hex ? `background:${w.hex}` : undefined}
+                data-index={i}
+                title={w.nama}
+                aria-label={w.nama}
+              ></button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <div class="pilihan">
+        <div class="label">Jumlah</div>
+        <div class="jumlah">
+          <button id="kurang" aria-label="Kurangi">−</button>
+          <input id="jumlah" type="number" min="1" value="1" inputmode="numeric" aria-label="Jumlah" />
+          <button id="tambah" aria-label="Tambah">+</button>
+        </div>
+      </div>
+
+      <div class="aksi">
+        <a class="btn-wa" id="btn-wa" target="_blank" rel="noopener">Pesan via WhatsApp</a>
+        {p.linkMarketplace && (
+          <a class="btn-mp" href={p.linkMarketplace} target="_blank" rel="noopener">Beli di marketplace</a>
+        )}
+      </div>
+
+      {p.deskripsi && <div class="deskripsi" set:html={p.deskripsi} />}
+    </section>
+  </article>
+
+  <script type="application/json" id="data-produk" set:html={JSON.stringify(dataKlien)} />
+</Base>
+
+<script>
+  type Varian = { id: string; kode: string; nama: string; harga: number; stok: number; preorder: boolean; foto: string[] };
+  type Data = {
+    kode: string; nama: string; fotoProduk: string[]; varian: Varian[];
+    warna: { nama: string; hex: string | null }[]; bagianWarna: string[];
+    nomorWA: string; namaToko: string;
+  };
+
+  const data: Data = JSON.parse(document.getElementById("data-produk")!.textContent!);
+  const $ = (id: string) => document.getElementById(id);
+  const rupiah = (n: number) => `Rp ${Math.round(n).toLocaleString("id-ID")}`;
+
+  let varian = data.varian.find((v) => v.stok > 0 || v.preorder) ?? data.varian[0];
+  let warnaIdx = 0;
+  const jumlah = $("jumlah") as HTMLInputElement;
+
+  // ---------- tab Foto / 3D ----------
+  document.querySelectorAll<HTMLButtonElement>("[data-tab]").forEach((tombol) => {
+    tombol.addEventListener("click", () => {
+      document.querySelectorAll("[data-tab]").forEach((b) => b.classList.toggle("aktif", b === tombol));
+      document.querySelectorAll<HTMLElement>("[data-panel]").forEach((p) => (p.hidden = p.dataset.panel !== tombol.dataset.tab));
+    });
+  });
+
+  // ---------- galeri ----------
+  function tampilkanGaleri(daftar: string[]) {
+    const utama = $("foto-utama") as HTMLImageElement | null;
+    const kecil = $("foto-kecil")!;
+    if (utama && daftar[0]) utama.src = daftar[0];
+    kecil.innerHTML = "";
+    daftar.forEach((src, i) => {
+      const b = document.createElement("button");
+      b.dataset.src = src;
+      if (i === 0) b.className = "aktif";
+      const img = document.createElement("img");
+      img.src = src;
+      img.alt = "";
+      img.loading = "lazy";
+      b.appendChild(img);
+      kecil.appendChild(b);
+    });
+  }
+  $("foto-kecil")?.addEventListener("click", (e) => {
+    const b = (e.target as HTMLElement).closest("button");
+    const utama = $("foto-utama") as HTMLImageElement | null;
+    if (!b || !utama) return;
+    utama.src = b.dataset.src!;
+    $("foto-kecil")!.querySelectorAll("button").forEach((x) => x.classList.toggle("aktif", x === b));
+  });
+
+  // ---------- warna pada model 3D ----------
+  const viewer = $("viewer") as any;
+  let warnaAsli: number[][] = [];
+  function terapkanWarna() {
+    if (!viewer?.model) return;
+    const w = data.warna[warnaIdx];
+    viewer.model.materials.forEach((m: any, i: number) => {
+      if (data.bagianWarna.length && !data.bagianWarna.includes(m.name)) return;
+      m.pbrMetallicRoughness.setBaseColorFactor(w?.hex || warnaAsli[i]);
+    });
+  }
+  viewer?.addEventListener("load", () => {
+    warnaAsli = viewer.model.materials.map((m: any) => [...m.pbrMetallicRoughness.baseColorFactor]);
+    console.log(`[${data.kode}] nama material:`, viewer.model.materials.map((m: any) => m.name));
+    terapkanWarna();
+  });
+  $("opsi-warna")?.addEventListener("click", (e) => {
+    const b = (e.target as HTMLElement).closest<HTMLButtonElement>("button");
+    if (!b) return;
+    warnaIdx = Number(b.dataset.index);
+    $("opsi-warna")!.querySelectorAll("button").forEach((x) => x.classList.toggle("aktif", x === b));
+    $("nama-warna")!.textContent = data.warna[warnaIdx].nama;
+    terapkanWarna();
+    perbarui();
+  });
+
+  // ---------- varian ----------
+  $("opsi-varian")?.addEventListener("click", (e) => {
+    const b = (e.target as HTMLElement).closest<HTMLButtonElement>("button");
+    if (!b || b.disabled) return;
+    varian = data.varian.find((v) => v.id === b.dataset.id)!;
+    $("opsi-varian")!.querySelectorAll("button").forEach((x) => x.classList.toggle("aktif", x === b));
+    tampilkanGaleri([...varian.foto, ...data.fotoProduk]);
+    perbarui();
+  });
+
+  // ---------- jumlah ----------
+  const batasJumlah = () => (varian.preorder ? 99 : Math.max(1, varian.stok));
+  function aturJumlah(n: number) {
+    jumlah.value = String(Math.min(Math.max(1, Math.floor(n) || 1), batasJumlah()));
+    perbarui();
+  }
+  $("kurang")!.addEventListener("click", () => aturJumlah(Number(jumlah.value) - 1));
+  $("tambah")!.addEventListener("click", () => aturJumlah(Number(jumlah.value) + 1));
+  jumlah.addEventListener("change", () => aturJumlah(Number(jumlah.value)));
+
+  // ---------- harga, stok, tombol WhatsApp ----------
+  function perbarui() {
+    const n = Number(jumlah.value) || 1;
+    $("harga")!.textContent = rupiah(varian.harga * n);
+
+    const habis = varian.stok <= 0 && !varian.preorder;
+    $("status-stok")!.innerHTML = habis
+      ? `<span class="badge habis">Stok habis</span>`
+      : varian.stok > 0
+        ? `<span class="badge">Stok ${varian.stok}</span>`
+        : `<span class="badge preorder">Pre-order</span>`;
+
+    const baris = [`Halo ${data.namaToko}, saya mau pesan:`, `Produk: ${data.nama}`, `Kode: ${varian.kode}`];
+    if (data.varian.length > 1) baris.push(`Varian: ${varian.nama}`);
+    if (data.warna.length) baris.push(`Warna: ${data.warna[warnaIdx].nama}`);
+    baris.push(`Jumlah: ${n}`, `Harga: ${rupiah(varian.harga * n)}`, "", location.href);
+
+    const wa = $("btn-wa") as HTMLAnchorElement;
+    wa.href = `https://wa.me/${data.nomorWA}?text=${encodeURIComponent(baris.join("\n"))}`;
+    wa.classList.toggle("nonaktif", habis);
+    wa.setAttribute("aria-disabled", String(habis));
+  }
+
+  perbarui();
+</script>
+
+<style>
+  .kembali { display: inline-block; margin: 4px 0 16px; color: var(--muted); text-decoration: none; }
+  .produk { display: grid; grid-template-columns: 1.2fr 1fr; gap: 32px; align-items: start; }
+  .media { position: sticky; top: 16px; }
+  .tab { display: flex; gap: 8px; margin-bottom: 12px; }
+  .foto-utama {
+    aspect-ratio: 1; background: #efeeea; border-radius: var(--radius); overflow: hidden;
+    display: grid; place-items: center;
+  }
+  .foto-utama img { width: 100%; height: 100%; object-fit: cover; }
+  .tanpa-foto { color: var(--muted); }
+  .foto-kecil { display: flex; gap: 8px; margin-top: 10px; overflow-x: auto; }
+  /* :global karena thumbnail dibuat ulang lewat JavaScript saat varian berganti */
+  .foto-kecil :global(button) {
+    flex: 0 0 64px; height: 64px; padding: 0; border: 2px solid transparent;
+    border-radius: 10px; overflow: hidden; cursor: pointer; background: #efeeea;
+  }
+  .foto-kecil :global(button.aktif) { border-color: var(--accent); }
+  .foto-kecil :global(img) { width: 100%; height: 100%; object-fit: cover; }
+  model-viewer { width: 100%; aspect-ratio: 1; background: #efeeea; border-radius: var(--radius); }
+  .petunjuk { font-size: 0.8rem; color: var(--muted); text-align: center; }
+
+  .detail h1 { margin: 4px 0 8px; font-size: 1.6rem; line-height: 1.25; }
+  .harga.besar { font-size: 1.4rem; margin-bottom: 6px; }
+  .pilihan { margin-top: 18px; }
+  .label { font-size: 0.85rem; color: var(--muted); margin-bottom: 8px; }
+  .opsi { display: flex; flex-wrap: wrap; gap: 8px; }
+  .opsi .chip:disabled { opacity: 0.4; cursor: not-allowed; text-decoration: line-through; }
+  .swatch {
+    width: 36px; height: 36px; border-radius: 50%; cursor: pointer;
+    border: 2px solid #fff; outline: 2px solid var(--line);
+  }
+  .swatch.aktif { outline: 3px solid var(--accent); }
+  .swatch.asli { background: conic-gradient(#e53935, #fbc02d, #43a047, #1e88e5, #8e24aa, #e53935); }
+  .jumlah { display: inline-flex; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; background: #fff; }
+  .jumlah button { width: 40px; border: none; background: none; font-size: 1.2rem; cursor: pointer; }
+  .jumlah input { width: 56px; border: none; text-align: center; font-size: 1rem; -moz-appearance: textfield; }
+  .aksi { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 24px; }
+  .aksi a {
+    flex: 1 1 200px; text-align: center; padding: 14px; border-radius: 12px;
+    font-weight: 600; text-decoration: none;
+  }
+  .btn-wa { background: var(--wa); color: #fff; }
+  .btn-wa.nonaktif { background: #ccc; pointer-events: none; }
+  .btn-mp { background: #fff; border: 1px solid var(--line); }
+  .deskripsi { margin-top: 28px; padding-top: 20px; border-top: 1px solid var(--line); }
+
+  @media (max-width: 760px) {
+    .produk { grid-template-columns: 1fr; gap: 20px; }
+    .media { position: static; }
+  }
+</style>

@@ -1,5 +1,6 @@
 # Cupil Stuff — layanan di homelab
-# Jalankan: docker compose up -d --build
+# Development (hanya PocketBase):  docker compose up -d --build
+# Produksi (dengan Tunnel):        docker compose --profile tunnel up -d --build
 services:
   pocketbase:
     build:
@@ -21,9 +22,11 @@ services:
 
   cloudflared:
     image: cloudflare/cloudflared:latest
+    # hanya jalan dengan --profile tunnel (butuh CLOUDFLARE_TUNNEL_TOKEN di .env)
+    profiles: ["tunnel"]
     restart: unless-stopped
     command: tunnel --no-autoupdate run
     environment:
-      TUNNEL_TOKEN: ${CLOUDFLARE_TUNNEL_TOKEN}
+      TUNNEL_TOKEN: ${CLOUDFLARE_TUNNEL_TOKEN:-}
     depends_on:
       - pocketbase

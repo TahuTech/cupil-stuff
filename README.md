@@ -6,7 +6,7 @@ Katalog online Cupil Stuff. Konteks proyek, stack, dan aturan bisnis ada di **CL
 
 ```bash
 cp .env.example .env                     # token boleh kosong untuk dev lokal
-docker compose up -d --build pocketbase  # http://127.0.0.1:8090/_/
+docker compose up -d --build             # hanya PocketBase: http://127.0.0.1:8090/_/
 cd web && cp .env.example .env           # ganti PUBLIC_PB_URL=http://127.0.0.1:8090, kosongkan PUBLIC_CDN_URL
 npm install
 npm run dev                              # http://localhost:4321
@@ -35,7 +35,7 @@ cupil-stuff/
 
 ```bash
 cp .env.example .env        # isi nanti setelah Tunnel dibuat
-docker compose up -d --build pocketbase
+docker compose up -d --build   # tanpa profile: hanya PocketBase
 docker compose exec pocketbase /pb/pocketbase superuser upsert email@kamu.com PASSWORD_KUAT --dir=/pb/pb_data
 ```
 
@@ -69,8 +69,10 @@ Zero Trust → Networks → Tunnels → buat tunnel (tipe *cloudflared*), lalu s
 Public hostname: `api.<domain>` → `http://pocketbase:8090`
 
 ```bash
-docker compose up -d
+docker compose --profile tunnel up -d
 ```
+
+Tanpa `--profile tunnel`, `cloudflared` tidak dijalankan (cocok untuk development).
 
 Untuk panel admin, buat aplikasi **Cloudflare Access** di path `api.<domain>/_/` supaya hanya emailmu yang bisa masuk.
 

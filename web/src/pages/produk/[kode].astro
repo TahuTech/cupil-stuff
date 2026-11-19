@@ -210,7 +210,7 @@ const dataKlien = {
     varian = data.varian.find((v) => v.id === b.dataset.id)!;
     $("opsi-varian")!.querySelectorAll("button").forEach((x) => x.classList.toggle("aktif", x === b));
     tampilkanGaleri([...varian.foto, ...data.fotoProduk]);
-    perbarui();
+    aturJumlah(Number(jumlah.value)); // batasi ulang sesuai stok varian baru, lalu perbarui()
   });
 
   // ---------- jumlah ----------
@@ -268,7 +268,8 @@ const dataKlien = {
   }
   .foto-kecil :global(button.aktif) { border-color: var(--accent); }
   .foto-kecil :global(img) { width: 100%; height: 100%; object-fit: cover; }
-  model-viewer { width: 100%; aspect-ratio: 1; background: #efeeea; border-radius: var(--radius); }
+  /* height: auto wajib: model-viewer punya height 150px bawaan, yang membuat aspect-ratio diabaikan */
+  model-viewer { width: 100%; height: auto; aspect-ratio: 1; background: #efeeea; border-radius: var(--radius); }
   .petunjuk { font-size: 0.8rem; color: var(--muted); text-align: center; }
 
   .detail h1 { margin: 4px 0 8px; font-size: 1.6rem; line-height: 1.25; }

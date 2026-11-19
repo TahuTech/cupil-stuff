@@ -15,6 +15,13 @@ npm test                                 # unit test hitungan (ongkir, dst.)
 
 PocketBase harus jalan saat `npm run dev`/`npm run build`, karena data katalog diambil saat build.
 
+Data contoh untuk development (kategori Pisau/Figur, EDC-001, MDL-001, EDC-002 nonaktif). Skrip ini menghapus lalu membuat ulang data contoh, jadi **jangan jalankan ke produksi**:
+
+```bash
+docker compose exec pocketbase /pb/pocketbase superuser upsert dev@cupilstuff.local PASSWORD --dir=/pb/pb_data
+PB_EMAIL=dev@cupilstuff.local PB_PASSWORD=PASSWORD SEED_GLB=/path/model.glb node scripts/seed-dev.mjs
+```
+
 ```
 cupil-stuff/
 ├── docker-compose.yml        PocketBase + Cloudflare Tunnel (jalan di homelab)

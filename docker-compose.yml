@@ -12,6 +12,17 @@ services:
       # URL deploy hook Cloudflare Pages (Settings → Builds → Deploy hooks).
       # Kosongkan jika belum ada; build ulang otomatis akan dilewati.
       PAGES_DEPLOY_HOOK: ${PAGES_DEPLOY_HOOK:-}
+    # CORS: origin yang boleh memanggil API dari browser (route /api/checkout).
+    # Produksi: isi PB_ORIGINS di .env dengan alamat katalog, misalnya https://cupilstuff.id
+    # Default untuk development: astro dev / preview di localhost.
+    command:
+      - /pb/pocketbase
+      - serve
+      - --http=0.0.0.0:8090
+      - --dir=/pb/pb_data
+      - --migrationsDir=/pb/pb_migrations
+      - --hooksDir=/pb/pb_hooks
+      - --origins=${PB_ORIGINS:-http://localhost:4321,http://127.0.0.1:4321}
     volumes:
       - ./pocketbase/pb_data:/pb/pb_data
       - ./pocketbase/pb_migrations:/pb/pb_migrations

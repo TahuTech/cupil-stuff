@@ -1,0 +1,115 @@
+---
+// Halaman setelah checkout berhasil. Data pesanan (angka dari server) dibaca dari
+// sessionStorage yang diisi halaman keranjang; nomor pesanan juga ada di URL (#CS-…).
+import Base from "../layouts/Base.astro";
+import Maskot from "../components/Maskot.astro";
+import { TOKO } from "../config";
+---
+<Base judul="Pesanan berhasil" deskripsi={`Pesanan ${TOKO.nama} berhasil dibuat.`}>
+  <section class="berhasil" id="berhasil" hidden>
+    <Maskot ukuran={110} senangSaatMuncul />
+    <h1>Pesanan berhasil dibuat</h1>
+    <p class="nomor">Nomor pesanan <b id="nomor"></b></p>
+
+    <div class="kotak">
+      <h2>Rincian</h2>
+      <ul class="rincian" id="rincian"></ul>
+      <dl id="angka"></dl>
+    </div>
+
+    <div class="kotak" id="bagian-bayar"></div>
+  </section>
+
+  <section class="tidak-ada" id="tidak-ada" hidden>
+    <h1>Data pesanan tidak ditemukan</h1>
+    <p>Jika kamu baru saja membuat pesanan, kirim nomor pesanannya ke kami lewat WhatsApp.</p>
+    <a class="tombol utama" href="/katalog">Kembali ke katalog</a>
+  </section>
+</Base>
+
+<script>
+  import { KUNCI_PESANAN, type PesananDibuat } from "../lib/checkout";
+  import { rupiah } from "../lib/format";
+  import { linkWA, TOKO } from "../config";
+
+  const $ = (id: string) => document.getElementById(id)!;
+  let ps: PesananDibuat | null = null;
+  try {
+    ps = JSON.parse(sessionStorage.getItem(KUNCI_PESANAN) || "null");
+  } catch {}
+  const nomorUrl = decodeURIComponent(location.hash.slice(1));
+  if (ps && nomorUrl && ps.nomor !== nomorUrl) ps = null;
+
+  if (!ps) {
+    $("tidak-ada").hidden = false;
+  } else {
+    $("berhasil").hidden = false;
+    $("nomor").textContent = ps.nomor;
+
+    $("rincian").replaceChildren(
+      ...ps.items.map((it) => {
+        const li = document.createElement("li");
+        const kiri = document.createElement("span");
+        kiri.textContent = `${it.nama}${it.varian_nama ? ` (${it.varian_nama})` : ""}${it.warna ? `, ${it.warna}` : ""} × ${it.jumlah}`;
+        const kanan = document.createElement("span");
+        kanan.textContent = rupiah(it.subtotal);
+        li.append(kiri, kanan);
+        return li;
+      }),
+    );
+
+    const baris: [string, string, string?][] = [["Subtotal", rupiah(ps.subtotal)]];
+    if (ps.ongkir_konfirmasi) {
+      baris.push(["Ongkir", "dikonfirmasi via WhatsApp"]);
+    } else {
+      baris.push([`Ongkir J&T (${ps.berat_ditagih_kg} kg${ps.zona ? `, ${ps.zona.nama}` : ""})`, rupiah(ps.ongkir)]);
+      if (ps.potongan_ongkir) baris.push(["Potongan ongkir", `− ${rupiah(ps.potongan_ongkir)}`, "potongan"]);
+    }
+    baris.push([ps.ongkir_konfirmasi ? "Total barang" : "Total bayar", rupiah(ps.total), "total"]);
+    $("angka").replaceChildren(
+      ...baris.map(([dt, dd, kelas]) => {
+        const div = document.createElement("div");
+        if (kelas) div.className = kelas;
+        const t = document.createElement("dt");
+        t.textContent = dt;
+        const d = document.createElement("dd");
+        d.textContent = dd;
+        div.append(t, d);
+        return div;
+      }),
+    );
+
+    // bagian pembayaran: diisi di bagian D (QRIS); untuk sementara instruksi WhatsApp
+    const bayar = $("bagian-bayar");
+    const pesan = `Halo ${TOKO.nama}, saya sudah membuat pesanan ${ps.nomor} dengan total ${rupiah(ps.total)}.`;
+    const a = document.createElement("a");
+    a.className = "tombol wa";
+    a.href = linkWA(pesan);
+    a.target = "_blank";
+    a.rel = "noopener";
+    a.textContent = "Konfirmasi via WhatsApp";
+    bayar.replaceChildren(a);
+  }
+</script>
+
+<style>
+  .berhasil, .tidak-ada { display: flex; flex-direction: column; align-items: center; text-align: center; padding: 16px 0; }
+  h1 { margin: 12px 0 4px; font-size: 1.4rem; }
+  .nomor { margin: 0 0 16px; color: var(--muted); }
+  .nomor b { color: var(--text); font-size: 1.1rem; letter-spacing: 0.03em; }
+  .kotak {
+    width: 100%; max-width: 480px; margin-top: 12px; padding: 16px 18px; text-align: left;
+    background: var(--card); border: 1px solid var(--line); border-radius: var(--radius);
+  }
+  .kotak h2 { margin: 0 0 10px; font-size: 1rem; }
+  .rincian { list-style: none; margin: 0 0 12px; padding: 0 0 12px; border-bottom: 1px solid var(--line); display: grid; gap: 6px; }
+  .rincian :global(li), #angka :global(div) { display: flex; justify-content: space-between; gap: 12px; }
+  .rincian :global(li span:last-child) { white-space: nowrap; }
+  #angka { margin: 0; display: grid; gap: 6px; }
+  #angka :global(dt) { color: var(--muted); }
+  #angka :global(dd) { margin: 0; font-weight: 600; text-align: right; }
+  #angka :global(.potongan dd) { color: #1a7f37; }
+  #angka :global(.total) { margin-top: 6px; padding-top: 10px; border-top: 1px solid var(--line); }
+  #angka :global(.total dt), #angka :global(.total dd) { color: var(--text); font-size: 1.15rem; font-weight: 700; }
+  .tidak-ada p { color: var(--muted); max-width: 40ch; }
+</style>

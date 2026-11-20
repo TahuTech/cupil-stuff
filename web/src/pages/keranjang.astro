@@ -49,6 +49,27 @@ const labelProvinsi = (p: string) => (p === "Jawa Timur" ? "Jawa Timur (selain K
           <div><dt>Total</dt><dd id="total"></dd></div>
         </dl>
       </div>
+
+      <form id="form-checkout" class="form-checkout" novalidate hidden>
+        <h2>Data pengiriman</h2>
+        <label for="nama">Nama penerima</label>
+        <input id="nama" name="nama" autocomplete="name" maxlength="80" required />
+        <p class="galat" id="galat-nama" hidden></p>
+
+        <label for="wa">Nomor WhatsApp</label>
+        <input id="wa" name="wa" type="tel" inputmode="tel" autocomplete="tel" placeholder="0812 3456 7890" maxlength="20" required />
+        <p class="galat" id="galat-wa" hidden></p>
+
+        <label for="alamat">Alamat lengkap</label>
+        <textarea id="alamat" name="alamat" rows="3" maxlength="500" autocomplete="street-address"
+          placeholder="Jalan, nomor rumah, RT/RW, kelurahan, kecamatan, kota, kode pos" required></textarea>
+        <p class="galat" id="galat-alamat" hidden></p>
+        <p class="galat" id="galat-provinsi" hidden></p>
+
+        <div class="galat-umum" id="galat-umum" role="alert" hidden></div>
+        <button type="submit" class="tombol utama kirim" id="kirim">Buat pesanan</button>
+        <p class="catatan">Pembayaran lewat QRIS setelah pesanan dibuat. Stok baru dikurangi setelah pembayaran dikonfirmasi.</p>
+      </form>
     </aside>
   </div>
 
@@ -197,6 +218,86 @@ const labelProvinsi = (p: string) => (p === "Jawa Timur" ? "Jawa Timur (selain K
     renderOngkir();
   });
 
+  // ---------- checkout ----------
+  import { validasiIsian, urlCheckout, KUNCI_PESANAN, type IsianCheckout, type PesananDibuat } from "../lib/checkout";
+  import { kosongkanKeranjang } from "../lib/keranjang";
+  const form = $("form-checkout") as HTMLFormElement;
+  const tombolKirim = $("kirim") as HTMLButtonElement;
+  const nilai = (id: string) => ($(id) as HTMLInputElement).value;
+  let siapCheckout: ReturnType<typeof ringkasKeranjang> | null = null;
+
+  window.addEventListener("keranjang:ringkasan", (e) => {
+    siapCheckout = (e as CustomEvent<ReturnType<typeof ringkasKeranjang>>).detail;
+    form.hidden = siapCheckout.untukCheckout.length === 0;
+  });
+
+  function tampilkanGalat(galat: Partial<Record<string, string>>) {
+    for (const f of ["nama", "wa", "alamat", "provinsi"]) {
+      const p = $(`galat-${f}`);
+      p.textContent = galat[f] ?? "";
+      p.hidden = !galat[f];
+      const input = document.getElementById(f);
+      if (input) input.setAttribute("aria-invalid", String(!!galat[f]));
+    }
+  }
+  function galatUmum(pesan: string, daftar: string[] = []) {
+    const box = $("galat-umum");
+    box.hidden = !pesan;
+    box.replaceChildren(document.createTextNode(pesan));
+    if (daftar.length) {
+      const ul = document.createElement("ul");
+      for (const d of daftar) {
+        const li = document.createElement("li");
+        li.textContent = d;
+        ul.appendChild(li);
+      }
+      box.appendChild(ul);
+    }
+  }
+
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    galatUmum("");
+    const isian: IsianCheckout = { nama: nilai("nama"), wa: nilai("wa"), alamat: nilai("alamat"), provinsi: pilihProvinsi.value };
+    const galat = validasiIsian(isian);
+    tampilkanGalat(galat);
+    if (Object.keys(galat).length) {
+      const pertama = Object.keys(galat)[0];
+      document.getElementById(pertama)?.focus();
+      return;
+    }
+    if (!siapCheckout || !siapCheckout.untukCheckout.length) return;
+
+    tombolKirim.disabled = true;
+    tombolKirim.textContent = "Memproses…";
+    try {
+      const res = await fetch(urlCheckout(), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...isian, items: siapCheckout.untukCheckout }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok) {
+        try { sessionStorage.setItem(KUNCI_PESANAN, JSON.stringify(data as PesananDibuat)); } catch {}
+        kosongkanKeranjang();
+        location.assign(`/pesanan-berhasil#${encodeURIComponent((data as PesananDibuat).nomor)}`);
+        return;
+      }
+      if (res.status === 400 && data.galat) {
+        tampilkanGalat(data.galat);
+        galatUmum(data.galat.items ?? data.galat.umum ?? data.pesan ?? "Periksa lagi isian kamu.");
+      } else if (res.status === 409 && data.masalah) {
+        galatUmum(data.pesan, data.masalah.map((m: { pesan: string }) => m.pesan));
+      } else {
+        galatUmum(data.pesan ?? data.message ?? "Pesanan belum bisa dibuat. Coba lagi sebentar.");
+      }
+    } catch {
+      galatUmum("Tidak bisa terhubung ke server. Coba lagi sebentar, atau pesan lewat WhatsApp.");
+    }
+    tombolKirim.disabled = false;
+    tombolKirim.textContent = "Buat pesanan";
+  });
+
   window.addEventListener(EVENT_BERUBAH, render);
   window.addEventListener("storage", render);
   render();
@@ -251,4 +352,16 @@ const labelProvinsi = (p: string) => (p === "Jawa Timur" ? "Jawa Timur (selain K
   .konfirmasi { margin: 10px 0 0; padding: 10px 12px; border-radius: 10px; background: #fff3cd; color: #7a5b00; font-size: 0.9rem; }
   .total { margin-top: 12px !important; padding-top: 12px; border-top: 1px solid var(--line); }
   .total :global(dt), .total :global(dd) { color: var(--text); font-size: 1.15rem; font-weight: 700; }
+
+  .form-checkout { margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--line); }
+  .form-checkout h2 { margin: 0 0 4px; font-size: 1.05rem; }
+  .form-checkout label { display: block; margin: 12px 0 6px; font-size: 0.9rem; color: var(--muted); }
+  .form-checkout textarea { resize: vertical; }
+  .form-checkout :global([aria-invalid="true"]) { border-color: var(--habis); }
+  .galat { margin: 4px 0 0; color: var(--habis); font-size: 0.85rem; }
+  .galat-umum { margin-top: 14px; padding: 10px 12px; border-radius: 10px; background: #fde8e7; color: var(--habis); font-size: 0.9rem; }
+  .galat-umum :global(ul) { margin: 6px 0 0; padding-left: 18px; }
+  .kirim { width: 100%; margin-top: 16px; font: inherit; font-weight: 600; cursor: pointer; }
+  .kirim:disabled { opacity: 0.6; cursor: wait; }
+  .catatan { margin: 10px 0 0; font-size: 0.8rem; color: var(--muted); }
 </style>

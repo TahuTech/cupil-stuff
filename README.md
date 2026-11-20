@@ -114,6 +114,7 @@ Urutannya: **kategori → produk → varian**.
 - Centang **unggulan** supaya produk tampil di "Produk pilihan" di landing page (maks. 4). Jika tidak ada yang dicentang, yang tampil 4 produk terbaru.
 - Toko marketplace untuk footer: isi `marketplace` di `web/src/config.ts`.
 - Ganti `nomorWA` di `web/src/config.ts`.
+- Jika desain kepala maskot (`assets/maskot/maskot-kepala.svg`) berubah, buat ulang favicon dengan `python3 scripts/buat-favicon.py` (butuh `rsvg-convert`).
 
 ## Status
 

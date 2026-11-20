@@ -1,9 +1,8 @@
 ---
 import Base from "../layouts/Base.astro";
 import KartuProduk from "../components/KartuProduk.astro";
-import Maskot from "../components/Maskot.astro";
 import { ambilKatalog } from "../lib/pb";
-import { TOKO, LINI } from "../config";
+import { LINI } from "../config";
 
 const { kategori, produk } = await ambilKatalog();
 
@@ -18,11 +17,11 @@ const dataFilter = {
   ),
 };
 ---
-<Base>
-  <section class="hero">
-    <h1><span class="sr-only">{TOKO.nama}: </span>{TOKO.tagline}</h1>
-    <Maskot ukuran={180} class="hero-maskot" />
-  </section>
+<Base judul="Katalog" deskripsi="Katalog model 3D dan barang EDC Cupil Stuff. Cari berdasarkan kode atau nama, lalu saring per lini dan kategori.">
+  <header class="judul">
+    <h1>Katalog</h1>
+    <p>Model 3D dan barang EDC. Cari pakai kode atau nama produk.</p>
+  </header>
 
   <div class="toolbar">
     <input id="cari" type="search" placeholder="Cari kode atau nama produk…" aria-label="Cari produk" />
@@ -35,7 +34,7 @@ const dataFilter = {
     )}
   </div>
 
-  <section class="grid" id="grid">
+  <section class="grid-produk" id="grid">
     {produk.map((p) => <KartuProduk produk={p} />)}
   </section>
   <p class="kosong" id="kosong" hidden>Produk tidak ditemukan.</p>
@@ -143,15 +142,8 @@ const dataFilter = {
 </script>
 
 <style>
-  /* teks di kiri, maskot di kanan; maskot 110px di HP, 180px di desktop */
-  .hero { display: flex; align-items: center; gap: 40px; padding: 4px 0 0; }
-  .hero h1 { margin: 0; font-size: 1.35rem; font-weight: 600; line-height: 1.35; max-width: 34ch; }
-  .hero :global(.hero-maskot) { margin-right: 8px; }
-  @media (max-width: 559px) {
-    .hero { justify-content: space-between; gap: 12px; }
-    .hero h1 { font-size: 1.02rem; }
-    .hero :global(.hero-maskot) { width: 110px; margin-right: 0; }
-  }
+  .judul h1 { margin: 4px 0 2px; font-size: 1.5rem; }
+  .judul p { margin: 0; color: var(--muted); }
   .toolbar { display: flex; flex-direction: column; gap: 12px; padding: 16px 0; }
   .toolbar input {
     padding: 10px 14px; border-radius: 999px; border: 1px solid var(--line);
@@ -173,11 +165,5 @@ const dataFilter = {
   .filter :global(.chip.kecil) { padding: 6px 12px; font-size: 0.85rem; }
   .filter :global(.chip.kembali) { color: var(--muted); }
 
-  .grid { display: grid; gap: 16px; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); }
   .kosong { text-align: center; color: var(--muted); padding: 40px; }
-
-  /* HP: 2 kolom tetap mulai lebar 320px */
-  @media (max-width: 559px) {
-    .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
-  }
 </style>

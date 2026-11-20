@@ -7,7 +7,7 @@ import Maskot from "../components/Maskot.astro";
     <Maskot ukuran={160} />
     <h1>Halamannya tidak ketemu</h1>
     <p>Mungkin link-nya salah ketik atau produknya sudah tidak dijual.</p>
-    <a class="tombol" href="/">Lihat katalog</a>
+    <a class="tombol utama" href="/katalog">Lihat katalog</a>
   </section>
 </Base>
 
@@ -15,8 +15,4 @@ import Maskot from "../components/Maskot.astro";
   .tidak-ketemu { display: flex; flex-direction: column; align-items: center; text-align: center; padding: 32px 0 16px; }
   h1 { margin: 20px 0 6px; font-size: 1.4rem; }
   p { margin: 0 0 20px; color: var(--muted); }
-  .tombol {
-    padding: 12px 22px; border-radius: 12px; background: var(--text); color: #fff;
-    font-weight: 600; text-decoration: none;
-  }
 </style>

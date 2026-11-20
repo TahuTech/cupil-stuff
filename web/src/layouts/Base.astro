@@ -9,7 +9,8 @@ interface Props {
   pakai3D?: boolean;
 }
 const { judul, deskripsi = TOKO.tagline, gambar, pakai3D = false } = Astro.props;
-const jalur = Astro.url.pathname.replace(/\/$/, "");
+// build.format "file": pathname bisa berakhiran .html (mis. /katalog.html)
+const jalur = Astro.url.pathname.replace(/\.html$/, "").replace(/\/$/, "");
 const aktif = (href: string) => (jalur === href || jalur.startsWith(`${href}/`) ? "page" : undefined);
 const judulLengkap = judul ? `${judul} · ${TOKO.nama}` : `${TOKO.nama} · ${TOKO.tagline}`;
 ---

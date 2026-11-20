@@ -1,0 +1,146 @@
+---
+// Maskot penguin Cupil Stuff.
+// Desain SVG: assets/maskot/maskot-penguin.svg (jangan diubah di sini).
+// Perilaku: assets/maskot/maskot-demo.html, dipasang per elemen supaya
+// satu halaman boleh punya lebih dari satu maskot.
+import svg from "../../../assets/maskot/maskot-penguin.svg?raw";
+
+interface Props {
+  /** lebar dalam px; tinggi mengikuti (rasio 220 × 230) */
+  ukuran?: number;
+  /** tampilkan ekspresi senang sebentar saat halaman dibuka */
+  senangSaatMuncul?: boolean;
+  class?: string;
+}
+const { ukuran = 220, senangSaatMuncul = false, class: kelas } = Astro.props;
+---
+<span
+  class:list={["maskot-wadah", kelas]}
+  style={`--ukuran-maskot:${ukuran}px`}
+  data-senang-awal={senangSaatMuncul ? "" : undefined}
+  set:html={svg}
+/>
+
+<style is:global>
+  /* global: SVG disisipkan lewat set:html, jadi tidak ikut scope Astro */
+  .maskot-wadah { display: inline-block; width: var(--ukuran-maskot); line-height: 0; flex: none; }
+  .maskot-wadah .maskot {
+    width: 100%; height: auto; cursor: pointer; touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+    transition: transform 0.2s cubic-bezier(0.3, 1.7, 0.6, 1);
+  }
+  .maskot.hop { transform: translateY(-16px) rotate(-3deg); }
+  .maskot .lid { transform-box: fill-box; transform-origin: center top; transform: scaleY(0); transition: transform 0.08s; }
+  .maskot.blink .lid { transform: scaleY(1); }
+  .maskot .happy, .maskot .spark, .maskot .mulut-senang { opacity: 0; transition: opacity 0.1s; }
+  .maskot.senang .happy, .maskot.senang .spark, .maskot.senang .mulut-senang { opacity: 1; }
+  .maskot.senang .mata, .maskot.senang .mulut-biasa { opacity: 0; }
+  @media (prefers-reduced-motion: reduce) {
+    .maskot-wadah .maskot, .maskot .lid { transition: none; }
+    .maskot.hop { transform: none; }
+  }
+</style>
+
+<script>
+  import { EVENT_SENANG } from "../lib/maskot";
+
+  // Skrip ini dibundel sekali per halaman; semua maskot dipasang di sini.
+  const gerakBoleh = !matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  type Maskot = {
+    svg: SVGSVGElement;
+    titik: { el: Element; x: number; y: number }[];
+    terlihat: boolean;
+    timerKedip?: ReturnType<typeof setTimeout>;
+    timerSenang?: ReturnType<typeof setTimeout>;
+  };
+  const semua: Maskot[] = [];
+
+  // ---------- pupil mengikuti kursor / sentuhan terakhir, maksimal 4 unit ----------
+  function lihat(m: Maskot, cx: number, cy: number) {
+    const r = m.svg.getBoundingClientRect();
+    const s = r.width / 220;
+    const dx = cx - (r.left + 110 * s);
+    const dy = cy - (r.top + 112 * s);
+    const d = Math.hypot(dx, dy) || 1;
+    const jarak = Math.min(4, d / 35);
+    for (const t of m.titik) {
+      t.el.setAttribute("cx", String(t.x + (dx / d) * jarak));
+      t.el.setAttribute("cy", String(t.y + (dy / d) * jarak));
+    }
+  }
+  let posisiTerakhir: { x: number; y: number } | null = null;
+  function lacak(e: PointerEvent) {
+    posisiTerakhir = { x: e.clientX, y: e.clientY };
+    for (const m of semua) if (m.terlihat) lihat(m, e.clientX, e.clientY);
+  }
+  let pelacakAktif = false;
+  function aturPelacak() {
+    if (!gerakBoleh) return;
+    const perlu = semua.some((m) => m.terlihat);
+    if (perlu === pelacakAktif) return;
+    pelacakAktif = perlu;
+    for (const jenis of ["pointermove", "pointerdown"] as const) {
+      if (perlu) document.addEventListener(jenis, lacak, { passive: true });
+      else document.removeEventListener(jenis, lacak);
+    }
+  }
+
+  // ---------- kedip otomatis acak 2,5–5,5 detik (hanya saat terlihat) ----------
+  function jadwalKedip(m: Maskot) {
+    clearTimeout(m.timerKedip);
+    if (!m.terlihat) return;
+    m.timerKedip = setTimeout(() => {
+      if (!m.svg.classList.contains("senang")) {
+        m.svg.classList.add("blink");
+        setTimeout(() => m.svg.classList.remove("blink"), 150);
+      }
+      jadwalKedip(m);
+    }, 2500 + Math.random() * 3000);
+  }
+
+  // ---------- senang 1,2 detik + lompat kecil ----------
+  function senang(m: Maskot) {
+    clearTimeout(m.timerSenang);
+    m.svg.classList.add("senang");
+    if (gerakBoleh) {
+      m.svg.classList.add("hop");
+      setTimeout(() => m.svg.classList.remove("hop"), 200);
+    }
+    m.timerSenang = setTimeout(() => m.svg.classList.remove("senang"), 1200);
+  }
+
+  const pengamat = new IntersectionObserver((entri) => {
+    for (const e of entri) {
+      const m = semua.find((x) => x.svg === e.target);
+      if (!m) continue;
+      m.terlihat = e.isIntersecting;
+      if (m.terlihat && posisiTerakhir && gerakBoleh) lihat(m, posisiTerakhir.x, posisiTerakhir.y);
+      jadwalKedip(m);
+    }
+    aturPelacak();
+  });
+
+  function pasang(wadah: HTMLElement) {
+    const svg = wadah.querySelector<SVGSVGElement>("svg.maskot");
+    if (!svg || wadah.dataset.terpasang) return;
+    wadah.dataset.terpasang = "1";
+    const titik = [...svg.querySelectorAll(".bola, .kilau")].map((el) => ({
+      el,
+      x: Number(el.getAttribute("cx")),
+      y: Number(el.getAttribute("cy")),
+    }));
+    const m: Maskot = { svg, titik, terlihat: false };
+    semua.push(m);
+    svg.addEventListener("click", () => senang(m));
+    pengamat.observe(svg);
+    if (wadah.dataset.senangAwal !== undefined) senang(m);
+  }
+
+  document.querySelectorAll<HTMLElement>(".maskot-wadah").forEach(pasang);
+
+  // dipicu dari bagian lain halaman lewat maskotSenang() di src/lib/maskot.ts
+  window.addEventListener(EVENT_SENANG, () => {
+    for (const m of semua) if (m.terlihat) senang(m);
+  });
+</script>

@@ -1,0 +1,56 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 220 230" class="maskot" aria-hidden="true">
+  <!-- Maskot penguin Cupil Stuff.
+       Bagian yang dipakai animasi (lihat maskot-demo.html):
+       .bola / .kilau   pupil dan kilau mata, digeser mengikuti kursor
+       .lid             kelopak untuk kedip (kelas .blink di <svg>)
+       .happy, .spark, .mulut-senang   tampil saat kelas .senang di <svg>
+       .mata, .mulut-biasa              disembunyikan saat .senang -->
+  <ellipse cx="110" cy="222" rx="50" ry="5" fill="#000" opacity=".08"/>
+  <g class="spark">
+    <path d="M24 90 l4 10 l10 4 l-10 4 l-4 10 l-4 -10 l-10 -4 l10 -4 z" fill="#3B6FD9"/>
+    <path d="M196 104 l3 8 l8 3 l-8 3 l-3 8 l-3 -8 l-8 -3 l8 -3 z" fill="#F2A33A"/>
+  </g>
+  <ellipse cx="88" cy="214" rx="17" ry="7" fill="#F5A623"/>
+  <ellipse cx="132" cy="214" rx="17" ry="7" fill="#F5A623"/>
+  <path d="M66 166 Q50 182 58 202 Q70 196 72 178 Z" fill="#1E1F26"/>
+  <path d="M154 166 Q170 182 162 202 Q150 196 148 178 Z" fill="#1E1F26"/>
+  <ellipse cx="110" cy="180" rx="46" ry="38" fill="#1E1F26"/>
+  <ellipse cx="110" cy="186" rx="30" ry="29" fill="#FFFFFF"/>
+  <ellipse cx="110" cy="108" rx="68" ry="60" fill="#1E1F26"/>
+  <path d="M110 82 Q122 70 140 74 Q170 82 168 116 Q166 150 110 154 Q54 150 52 116 Q50 82 80 74 Q98 70 110 82 Z" fill="#FFFFFF"/>
+  <g class="mata">
+    <g>
+      <circle class="bola" cx="86" cy="112" r="11" fill="#1E1F26"/>
+      <circle class="kilau" cx="89" cy="108" r="3.6" fill="#fff"/>
+      <circle class="kilau" cx="83" cy="116" r="1.6" fill="#fff"/>
+    </g>
+    <g>
+      <circle class="bola" cx="134" cy="112" r="11" fill="#1E1F26"/>
+      <circle class="kilau" cx="137" cy="108" r="3.6" fill="#fff"/>
+      <circle class="kilau" cx="131" cy="116" r="1.6" fill="#fff"/>
+    </g>
+    <rect class="lid" x="73" y="99" width="26" height="26" rx="13" fill="#FFFFFF"/>
+    <rect class="lid" x="121" y="99" width="26" height="26" rx="13" fill="#FFFFFF"/>
+    <path class="lid" d="M74 112 Q86 120 98 112" stroke="#1E1F26" stroke-width="3" fill="none" stroke-linecap="round"/>
+    <path class="lid" d="M122 112 Q134 120 146 112" stroke="#1E1F26" stroke-width="3" fill="none" stroke-linecap="round"/>
+  </g>
+  <g class="happy" stroke="#1E1F26" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M76 116 Q86 102 96 116"/>
+    <path d="M124 116 Q134 102 144 116"/>
+  </g>
+  <ellipse cx="68" cy="132" rx="10" ry="6" fill="#F7A1B0" opacity=".85"/>
+  <ellipse cx="152" cy="132" rx="10" ry="6" fill="#F7A1B0" opacity=".85"/>
+  <path class="mulut-biasa" d="M102 128 L118 128 L110 138 Z" fill="#F5A623" stroke="#E08A0E" stroke-width="1.5" stroke-linejoin="round"/>
+  <g class="mulut-senang">
+    <path d="M101 128 L119 128 L110 134 Z" fill="#F5A623"/>
+    <path d="M103 134 Q110 150 117 134 Z" fill="#E2546B"/>
+    <path d="M106 141 Q110 146 114 141 Q110 139 106 141Z" fill="#F7A1B0"/>
+  </g>
+  <path d="M44 82 Q46 34 110 30 Q174 34 176 82 Z" fill="#3B6FD9"/>
+  <path d="M110 30 Q112 56 118 82" stroke="#2F5BB5" stroke-width="2" fill="none"/>
+  <path d="M40 80 Q110 70 180 80 Q186 90 176 94 Q110 84 44 94 Q34 90 40 80 Z" fill="#2F5BB5"/>
+  <path d="M50 86 Q110 78 170 86" stroke="#7FA6F0" stroke-width="2" stroke-dasharray="4 4" fill="none"/>
+  <circle cx="110" cy="29" r="7" fill="#7FA6F0"/>
+  <circle cx="88" cy="58" r="13" fill="#FFFFFF"/>
+  <path d="M94 52 Q88 48 83 53 Q80 58 83 63 Q88 68 94 64" stroke="#3B6FD9" stroke-width="3.2" fill="none" stroke-linecap="round"/>
+</svg>

@@ -6,6 +6,9 @@ export default defineConfig({
   site: process.env.PUBLIC_SITE_URL || "https://cupilstuff.example",
   output: "static",
   trailingSlash: "never",
+  // /katalog → katalog.html (bukan katalog/index.html), supaya Cloudflare Pages
+  // menyajikan URL tanpa garis miring akhir tanpa redirect tambahan.
+  build: { format: "file" },
   vite: {
     server: {
       // Saat dev, URL file relatif (/api/files/...) diteruskan ke PocketBase lokal.

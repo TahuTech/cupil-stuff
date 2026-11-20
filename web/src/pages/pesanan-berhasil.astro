@@ -31,6 +31,100 @@ import { TOKO } from "../config";
   import { KUNCI_PESANAN, type PesananDibuat } from "../lib/checkout";
   import { rupiah } from "../lib/format";
   import { linkWA, TOKO } from "../config";
+  import { qrisDenganNominal } from "../lib/qris";
+  import { encode, renderSVG } from "uqr";
+
+  const QRIS_STATIS = (import.meta.env.PUBLIC_QRIS_STATIS || "").trim();
+
+  function el<K extends keyof HTMLElementTagNameMap>(tag: K, kelas?: string, teks?: string) {
+    const e = document.createElement(tag);
+    if (kelas) e.className = kelas;
+    if (teks !== undefined) e.textContent = teks;
+    return e;
+  }
+  function tombolWA(teks: string, pesan: string) {
+    const a = el("a", "tombol wa", teks);
+    a.href = linkWA(pesan);
+    a.target = "_blank";
+    a.rel = "noopener";
+    return a;
+  }
+
+  /** Unduh QR sebagai PNG (untuk bayar dari HP yang sama: buka gambar di aplikasi bank/e-wallet). */
+  function unduhPNG(isi: string, namaBerkas: string) {
+    const qr = encode(isi, { ecc: "M", border: 4 });
+    const skala = 10;
+    const c = document.createElement("canvas");
+    c.width = c.height = qr.size * skala;
+    const ctx = c.getContext("2d")!;
+    ctx.fillStyle = "#fff";
+    ctx.fillRect(0, 0, c.width, c.height);
+    ctx.fillStyle = "#000";
+    qr.data.forEach((baris, y) => baris.forEach((hitam, x) => hitam && ctx.fillRect(x * skala, y * skala, skala, skala)));
+    c.toBlob((blob) => {
+      if (!blob) return;
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = namaBerkas;
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+    }, "image/png");
+  }
+
+  function renderBayar(ps: PesananDibuat) {
+    const bayar = $("bagian-bayar");
+    const total = rupiah(ps.total);
+
+    // ongkir perlu dikonfirmasi: jangan tampilkan QRIS
+    if (ps.ongkir_konfirmasi) {
+      bayar.replaceChildren(
+        el("h2", "", "Langkah berikutnya"),
+        el("p", "info", `${ps.alasan_konfirmasi || "Ongkir dikonfirmasi via WhatsApp"}. Kami kirim total akhir dan cara bayar lewat WhatsApp.`),
+        tombolWA("Konfirmasi ongkir via WhatsApp", `Halo ${TOKO.nama}, saya membuat pesanan ${ps.nomor} (total barang ${total}, dikirim ke ${ps.provinsi}). Mohon info ongkirnya.`),
+      );
+      return;
+    }
+
+    const pesanBukti = `Halo ${TOKO.nama}, saya sudah membayar pesanan ${ps.nomor} sebesar ${total}. Bukti bayar saya lampirkan.`;
+    let qris = "";
+    try {
+      qris = QRIS_STATIS ? qrisDenganNominal(QRIS_STATIS, ps.total) : "";
+    } catch {
+      qris = ""; // isi QRIS tidak dicatat ke console
+    }
+    if (!qris) {
+      bayar.replaceChildren(
+        el("h2", "", "Pembayaran"),
+        el("p", "info", `Pembayaran QRIS belum tersedia. Hubungi kami lewat WhatsApp untuk membayar ${total}.`),
+        tombolWA("Hubungi via WhatsApp", `Halo ${TOKO.nama}, saya mau membayar pesanan ${ps.nomor} sebesar ${total}.`),
+      );
+      return;
+    }
+
+    const gambar = el("div", "qr");
+    gambar.setAttribute("role", "img");
+    gambar.setAttribute("aria-label", `Kode QRIS untuk membayar ${total}`);
+    gambar.innerHTML = renderSVG(qris, { ecc: "M", border: 2 }); // SVG buatan library dari string QRIS
+    const unduh = el("button", "tombol", "Simpan gambar QR");
+    unduh.type = "button";
+    unduh.addEventListener("click", () => unduhPNG(qris, `QRIS-${ps.nomor}.png`));
+
+    const langkah = el("ol", "langkah-bayar");
+    for (const t of [
+      "Scan QR di atas dengan aplikasi bank atau e-wallet. Kalau bayar dari HP ini, simpan gambar QR lalu buka dari aplikasinya.",
+      `Pastikan nominalnya ${total}, lalu bayar.`,
+      "Kirim bukti bayar lewat tombol WhatsApp di bawah. Pesanan diproses setelah pembayaran dikonfirmasi.",
+    ]) langkah.appendChild(el("li", "", t));
+
+    bayar.replaceChildren(
+      el("h2", "", "Bayar dengan QRIS"),
+      el("p", "nominal", total),
+      gambar,
+      unduh,
+      langkah,
+      tombolWA("Kirim bukti bayar via WhatsApp", pesanBukti),
+    );
+  }
 
   const $ = (id: string) => document.getElementById(id)!;
   let ps: PesananDibuat | null = null;
@@ -79,16 +173,7 @@ import { TOKO } from "../config";
       }),
     );
 
-    // bagian pembayaran: diisi di bagian D (QRIS); untuk sementara instruksi WhatsApp
-    const bayar = $("bagian-bayar");
-    const pesan = `Halo ${TOKO.nama}, saya sudah membuat pesanan ${ps.nomor} dengan total ${rupiah(ps.total)}.`;
-    const a = document.createElement("a");
-    a.className = "tombol wa";
-    a.href = linkWA(pesan);
-    a.target = "_blank";
-    a.rel = "noopener";
-    a.textContent = "Konfirmasi via WhatsApp";
-    bayar.replaceChildren(a);
+    renderBayar(ps);
   }
 </script>
 
@@ -112,4 +197,13 @@ import { TOKO } from "../config";
   #angka :global(.total) { margin-top: 6px; padding-top: 10px; border-top: 1px solid var(--line); }
   #angka :global(.total dt), #angka :global(.total dd) { color: var(--text); font-size: 1.15rem; font-weight: 700; }
   .tidak-ada p { color: var(--muted); max-width: 40ch; }
+
+  #bagian-bayar { display: flex; flex-direction: column; gap: 12px; }
+  #bagian-bayar :global(h2) { margin: 0; }
+  #bagian-bayar :global(.info) { margin: 0; color: var(--muted); }
+  #bagian-bayar :global(.nominal) { margin: 0; font-size: 1.6rem; font-weight: 800; text-align: center; }
+  #bagian-bayar :global(.qr) { align-self: center; width: min(280px, 100%); background: #fff; border-radius: 12px; padding: 8px; border: 1px solid var(--line); }
+  #bagian-bayar :global(.qr svg) { display: block; width: 100%; height: auto; }
+  #bagian-bayar :global(button.tombol) { font: inherit; font-weight: 600; cursor: pointer; }
+  #bagian-bayar :global(.langkah-bayar) { margin: 0; padding-left: 20px; color: var(--muted); font-size: 0.9rem; display: grid; gap: 6px; }
 </style>

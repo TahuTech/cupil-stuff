@@ -1,0 +1,148 @@
+---
+import Base from "../layouts/Base.astro";
+import KartuProduk from "../components/KartuProduk.astro";
+import Maskot from "../components/Maskot.astro";
+import { ambilKatalog, pilihProdukUnggulan } from "../lib/pb";
+import { TOKO, linkWA } from "../config";
+
+const { produk } = await ambilKatalog();
+const pilihan = pilihProdukUnggulan(produk);
+
+const lini = [
+  {
+    judul: "Model 3D",
+    teks: "Figur dan pernak-pernik cetak 3D buatan sendiri. Bisa diputar dalam 3D dan pilih warnanya.",
+    href: "/katalog?lini=model3d",
+  },
+  {
+    judul: "Barang EDC",
+    teks: "Pisau lipat, peluit, dan perlengkapan kecil lain untuk dibawa sehari-hari.",
+    href: "/katalog?lini=edc",
+  },
+  {
+    judul: "Servis mouse dan keyboard",
+    teks: "Perbaikan mouse dan keyboard mechanical. Pengecekan gratis, bayar setelah selesai.",
+    href: "/servis",
+  },
+];
+
+const langkah = [
+  { judul: "Pilih produk", teks: "Buka katalog, pilih varian, warna, dan jumlahnya." },
+  { judul: "Pilih provinsi", teks: "Ongkir dihitung otomatis sesuai zona dan berat kiriman." },
+  { judul: "Bayar QRIS", teks: "Scan QRIS dengan nominal yang sudah terisi, lalu kirim bukti bayar via WhatsApp." },
+];
+---
+<Base deskripsi={`${TOKO.nama}: ${TOKO.tagline}. Dikirim dari ${TOKO.kota}.`}>
+  <section class="hero">
+    <div class="hero-teks">
+      <h1>Model 3D, barang EDC, dan servis mouse &amp; keyboard</h1>
+      <p>Model 3D dibuat sendiri di {TOKO.kota}. Lihat produknya dalam 3D, pilih varian, lalu bayar pakai QRIS.</p>
+    </div>
+    <div class="hero-aksi">
+      <a class="tombol utama" href="/katalog">Lihat katalog</a>
+      <a class="tombol" href={linkWA(`Halo ${TOKO.nama}, saya mau tanya.`)} target="_blank" rel="noopener">Tanya via WhatsApp</a>
+    </div>
+    <Maskot ukuran={180} class="hero-maskot" />
+  </section>
+
+  <section class="bagian" aria-labelledby="judul-lini">
+    <h2 id="judul-lini" class="sr-only">Yang ada di {TOKO.nama}</h2>
+    <div class="lini">
+      {lini.map((l) => (
+        <a class="kartu-lini" href={l.href}>
+          <h3>{l.judul} <span aria-hidden="true">→</span></h3>
+          <p>{l.teks}</p>
+        </a>
+      ))}
+    </div>
+  </section>
+
+  {pilihan.length > 0 && (
+    <section class="bagian" aria-labelledby="judul-pilihan">
+      <div class="kepala-bagian">
+        <h2 id="judul-pilihan">Produk pilihan</h2>
+        <a href="/katalog">Lihat semua →</a>
+      </div>
+      <div class="grid-produk">
+        {pilihan.map((p) => <KartuProduk produk={p} />)}
+      </div>
+    </section>
+  )}
+
+  <section class="bagian" aria-labelledby="judul-cara">
+    <h2 id="judul-cara">Cara pesan</h2>
+    <ol class="langkah">
+      {langkah.map((l, i) => (
+        <li>
+          <span class="nomor" aria-hidden="true">{i + 1}</span>
+          <div>
+            <h3>{l.judul}</h3>
+            <p>{l.teks}</p>
+          </div>
+        </li>
+      ))}
+    </ol>
+  </section>
+
+  <section class="bagian ongkir" aria-labelledby="judul-ongkir">
+    <h2 id="judul-ongkir">Pengiriman</h2>
+    <p>
+      Dikirim dari {TOKO.kota} lewat J&amp;T. Ada potongan ongkir <b>Rp 5.000</b> untuk setiap
+      <b>Rp 100.000</b> belanja (paling banyak sebesar ongkirnya).
+    </p>
+  </section>
+</Base>
+
+<style>
+  /* hero: teks di kiri, maskot di kanan (110px di HP, 180px di desktop) */
+  /* desktop: teks + tombol di kiri, maskot di kanan; HP: tombol pindah ke bawah, lebar penuh */
+  .hero {
+    display: grid; grid-template-columns: minmax(0, 560px) auto; column-gap: 56px; align-items: center;
+    grid-template-areas: "teks maskot" "aksi maskot"; justify-content: start; padding: 12px 0 8px;
+  }
+  .hero-teks { grid-area: teks; }
+  .hero-aksi { grid-area: aksi; align-self: start; }
+  .hero :global(.hero-maskot) { grid-area: maskot; }
+  .hero h1 { margin: 0 0 10px; font-size: 2rem; line-height: 1.2; }
+  .hero p { margin: 0 0 20px; color: var(--muted); font-size: 1.05rem; }
+  .hero-aksi { display: flex; flex-wrap: wrap; gap: 10px; }
+
+  .bagian { padding: 28px 0 0; }
+  .bagian h2 { margin: 0 0 14px; font-size: 1.25rem; }
+  .kepala-bagian { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
+  .kepala-bagian a { color: var(--accent); text-decoration: none; font-weight: 600; white-space: nowrap; }
+
+  .lini { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+  .kartu-lini {
+    display: block; padding: 18px 20px; background: var(--card); border: 1px solid var(--line);
+    border-radius: var(--radius); text-decoration: none; transition: transform 0.15s, box-shadow 0.15s;
+  }
+  .kartu-lini:hover { transform: translateY(-2px); box-shadow: 0 6px 18px rgba(0, 0, 0, 0.08); }
+  .kartu-lini h3 { margin: 0 0 6px; font-size: 1.05rem; }
+  .kartu-lini h3 span { color: var(--accent); }
+  .kartu-lini p { margin: 0; color: var(--muted); font-size: 0.95rem; }
+
+  .langkah { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+  .langkah li { display: flex; gap: 14px; align-items: flex-start; }
+  .nomor {
+    flex: none; width: 32px; height: 32px; border-radius: 50%; display: grid; place-items: center;
+    background: var(--text); color: #fff; font-weight: 700;
+  }
+  .langkah h3 { margin: 4px 0 2px; font-size: 1rem; }
+  .langkah p { margin: 0; color: var(--muted); font-size: 0.95rem; }
+
+  .ongkir p { margin: 0; max-width: 60ch; }
+
+  @media (max-width: 759px) {
+    .lini, .langkah { grid-template-columns: 1fr; gap: 10px; }
+    .langkah { gap: 16px; }
+  }
+  @media (max-width: 559px) {
+    .hero { grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "teks maskot" "aksi aksi"; column-gap: 12px; align-items: start; }
+    .hero h1 { font-size: 1.35rem; }
+    .hero p { font-size: 0.95rem; margin-bottom: 16px; }
+    .hero :global(.hero-maskot) { width: 110px; }
+    .hero-aksi .tombol { flex: 1 1 0; padding: 11px 10px; white-space: nowrap; }
+    .kartu-lini { padding: 14px 16px; }
+  }
+</style>

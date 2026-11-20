@@ -33,6 +33,8 @@ export type Produk = {
   warna: Warna[];
   bagianWarna: string[];
   linkMarketplace: string;
+  unggulan: boolean;
+  dibuat: string; // tanggal dibuat (ISO), untuk "produk terbaru"
   varian: Varian[];
   hargaMin: number;
   hargaMax: number;
@@ -127,6 +129,8 @@ async function muatKatalog() {
         warna: Array.isArray(p.warna) ? p.warna : [],
         bagianWarna: Array.isArray(p.bagian_warna) ? p.bagian_warna : [],
         linkMarketplace: p.link_marketplace || "",
+        unggulan: !!p.unggulan,
+        dibuat: p.created || "",
         varian,
         hargaMin: harga.length ? Math.min(...harga) : 0,
         hargaMax: harga.length ? Math.max(...harga) : 0,
@@ -148,4 +152,11 @@ export async function ambilZonaOngkir(): Promise<ZonaOngkir[]> {
     tarifPerKg: z.tarif_per_kg,
     estimasi: z.estimasi || "",
   }));
+}
+
+/** Produk untuk landing page: maks. 4 yang unggulan; jika tidak ada, 4 produk terbaru. */
+export function pilihProdukUnggulan(produk: Produk[], maks = 4): Produk[] {
+  const unggulan = produk.filter((p) => p.unggulan);
+  if (unggulan.length) return unggulan.slice(0, maks);
+  return [...produk].sort((a, b) => b.dibuat.localeCompare(a.dibuat)).slice(0, maks);
 }

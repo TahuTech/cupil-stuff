@@ -1,0 +1,22 @@
+---
+// Placeholder. Isi lengkap (daftar jasa, form, tiket) dikerjakan di tahap 5.
+import Base from "../layouts/Base.astro";
+import Maskot from "../components/Maskot.astro";
+import { TOKO, linkWA } from "../config";
+---
+<Base judul="Servis mouse dan keyboard" deskripsi={`Servis mouse dan keyboard mechanical di ${TOKO.kota}.`}>
+  <section class="segera">
+    <Maskot ukuran={140} />
+    <h1>Servis mouse dan keyboard</h1>
+    <p>Halaman ini segera hadir. Sementara itu, tanya dulu lewat WhatsApp, ya.</p>
+    <a class="tombol wa" href={linkWA(`Halo ${TOKO.nama}, saya mau tanya soal servis mouse/keyboard.`)} target="_blank" rel="noopener">
+      Tanya via WhatsApp
+    </a>
+  </section>
+</Base>
+
+<style>
+  .segera { display: flex; flex-direction: column; align-items: center; text-align: center; padding: 32px 0 16px; }
+  h1 { margin: 20px 0 6px; font-size: 1.4rem; }
+  p { margin: 0 0 20px; color: var(--muted); max-width: 40ch; }
+</style>

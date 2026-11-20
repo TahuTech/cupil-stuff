@@ -1,5 +1,5 @@
 ---
-import { TOKO } from "../config";
+import { TOKO, linkWA } from "../config";
 
 interface Props {
   judul?: string;
@@ -8,6 +8,8 @@ interface Props {
   pakai3D?: boolean;
 }
 const { judul, deskripsi = TOKO.tagline, gambar, pakai3D = false } = Astro.props;
+const jalur = Astro.url.pathname.replace(/\/$/, "");
+const aktif = (href: string) => (jalur === href || jalur.startsWith(`${href}/`) ? "page" : undefined);
 const judulLengkap = judul ? `${judul} · ${TOKO.nama}` : `${TOKO.nama} · ${TOKO.tagline}`;
 ---
 <!doctype html>
@@ -29,15 +31,20 @@ const judulLengkap = judul ? `${judul} · ${TOKO.nama}` : `${TOKO.nama} · ${TOK
     <header class="topbar">
       <a href="/" class="brand">{TOKO.nama}</a>
       <nav>
-        <a href="/">Katalog</a>
-        <a href={`https://wa.me/${TOKO.nomorWA}`} target="_blank" rel="noopener">WhatsApp</a>
+        <a href="/katalog" aria-current={aktif("/katalog")}>Katalog</a>
+        <a href="/servis" aria-current={aktif("/servis")}>Servis</a>
+        <a href={linkWA()} target="_blank" rel="noopener">WhatsApp</a>
       </nav>
     </header>
     <main>
       <slot />
     </main>
     <footer>
-      <p>{TOKO.nama} · {TOKO.kota}</p>
+      <p><b>{TOKO.nama}</b> · {TOKO.kota}</p>
+      <p class="tautan-footer">
+        <a href={linkWA()} target="_blank" rel="noopener">WhatsApp</a>
+        {TOKO.marketplace.map((m) => <a href={m.url} target="_blank" rel="noopener">{m.nama}</a>)}
+      </p>
     </footer>
   </body>
 </html>
@@ -74,8 +81,28 @@ const judulLengkap = judul ? `${judul} · ${TOKO.nama}` : `${TOKO.nama} · ${TOK
   .topbar nav { display: flex; gap: 16px; }
   .topbar nav a { text-decoration: none; color: var(--muted); }
   .topbar nav a:hover { color: var(--text); }
+  .topbar nav a[aria-current="page"] { color: var(--text); font-weight: 600; }
+  @media (max-width: 400px) {
+    .topbar { padding: 14px 16px; }
+    .topbar nav { gap: 12px; font-size: 0.95rem; }
+  }
 
-  footer { text-align: center; color: var(--muted); font-size: 0.9rem; padding: 24px; }
+  footer { text-align: center; color: var(--muted); font-size: 0.9rem; padding: 24px; border-top: 1px solid var(--line); }
+  footer p { margin: 4px 0; }
+  .tautan-footer { display: flex; justify-content: center; flex-wrap: wrap; gap: 16px; }
+
+  /* grid kartu produk (katalog dan landing page): 2 kolom di HP, auto-fill di layar lebar */
+  .grid-produk { display: grid; gap: 16px; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); }
+  @media (max-width: 559px) {
+    .grid-produk { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+  }
+
+  .tombol {
+    display: inline-block; padding: 12px 22px; border-radius: 12px; font-weight: 600;
+    text-decoration: none; text-align: center; border: 1px solid var(--line); background: #fff;
+  }
+  .tombol.utama { background: var(--text); color: #fff; border-color: var(--text); }
+  .tombol.wa { background: var(--wa); color: #fff; border-color: var(--wa); }
 
   .kode { font-size: 0.75rem; font-weight: 700; color: var(--accent); letter-spacing: 0.04em; }
   .harga { font-weight: 600; }

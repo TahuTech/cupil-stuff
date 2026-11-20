@@ -16,7 +16,7 @@ Panduan ini berisi prompt siap tempel untuk setiap tahap. Konteks proyek (stack,
 | --- | --- | --- |
 | 0 | Persiapan repo | Tidak |
 | 1 | PocketBase: Docker, skema, data zona ongkir | Tidak |
-| 2 | Katalog barang: beranda, halaman produk, pesan via WA | Tidak |
+| 2 | Katalog barang: halaman katalog, halaman produk, pesan via WA | Tidak |
 | 3 | Keranjang, ongkir, checkout, QRIS | Tidak |
 | 4 | Konfirmasi bayar dan stok di admin | Tidak |
 | 5 | Jasa servis: daftar jasa, form, tiket, cek status | Tidak |
@@ -85,7 +85,7 @@ Kerjakan tahap 2: katalog Astro yang mengambil data dari PocketBase saat build.
    PUBLIC_PB_URL, gabungkan varian ke produknya, buang produk tanpa varian.
    URL file: pakai PUBLIC_CDN_URL/<collectionId>/<recordId>/<file> jika diisi,
    kalau tidak /api/files/... dari PocketBase. Cache supaya satu build cukup satu kali ambil.
-2. Beranda: hero singkat, pencarian (kode/nama), filter lini (Model 3D / EDC) dan kategori,
+2. Halaman katalog (/katalog; dulu beranda, kini / adalah landing page): pencarian (kode/nama), filter lini (Model 3D / EDC) dan kategori,
    grid kartu produk (foto, kode, nama, rentang harga, label 3D, label stok habis, titik warna).
    Pencarian dan filter berjalan di browser tanpa reload.
 3. Halaman /produk/[kode]:
@@ -185,7 +185,7 @@ Kerjakan tahap 4: alur admin setelah customer membayar.
 ```
 Kerjakan tahap 5: halaman jasa servis.
 
-- /servis: daftar jasa (nama, perangkat, harga mulai dari, estimasi), portofolio sebelum/sesudah,
+- /servis (sekarang masih placeholder "segera hadir"): daftar jasa (nama, perangkat, harga mulai dari, estimasi), portofolio sebelum/sesudah,
   penjelasan aturan (tanpa DP, bayar setelah selesai, cek gratis, batal hanya bayar ongkir kirim
   balik, boleh antar langsung)
 - form servis: jasa, perangkat, keluhan, foto (maks 5, dikecilkan di browser sebelum upload),
@@ -231,7 +231,8 @@ lalu siapkan file yang dibutuhkan:
 Kerjakan tahap 7: rapikan katalog untuk dipakai publik.
 
 - sitemap.xml, robots.txt, favicon, og:image per produk
-- halaman info: cara pesan, ongkir per zona (tabel dari data zona), garansi/retur, kontak
+- halaman /info: cara pesan, ongkir per zona (tabel 6 zona dari data zona), garansi/retur, kontak;
+  tautkan dari bagian "Pengiriman" di landing page
 - gambar: lazy-load, ukuran sesuai, cek skor Lighthouse di HP (target performa di atas 90)
 - aksesibilitas dasar: label tombol, kontras, navigasi keyboard
 - halaman 404 dengan pencarian

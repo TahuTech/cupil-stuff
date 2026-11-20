@@ -35,7 +35,7 @@ cupil-stuff/
         ├── config.ts         nama toko, nomor WhatsApp
         ├── lib/pb.ts         ambil data dari PocketBase saat build
         ├── lib/ongkir.ts     rumus ongkir (dipakai di tahap 3) + ongkir.test.ts
-        └── pages/            beranda katalog, halaman produk
+        └── pages/            landing (/), katalog, produk, servis (placeholder), 404
 ```
 
 ## 1. Jalankan PocketBase di homelab
@@ -111,12 +111,14 @@ Urutannya: **kategori → produk → varian**.
 - **Warna** (khusus model 3D) diisi dalam format JSON: `[{"nama":"Asli","hex":null},{"nama":"Merah","hex":"#e53935"}]`
 - **Bagian warna**: kosongkan supaya semua bagian berubah, atau isi nama material, misalnya `["Body"]`. Nama material muncul di Console browser (F12) saat membuka halaman produk.
 - Centang **aktif** supaya produk tampil di katalog.
+- Centang **unggulan** supaya produk tampil di "Produk pilihan" di landing page (maks. 4). Jika tidak ada yang dicentang, yang tampil 4 produk terbaru.
+- Toko marketplace untuk footer: isi `marketplace` di `web/src/config.ts`.
 - Ganti `nomorWA` di `web/src/config.ts`.
 
 ## Status
 
 - [x] Tahap 1: PocketBase, skema, zona ongkir, hook build ulang
-- [x] Tahap 2: beranda (cari, filter lini/kategori), halaman produk (galeri, 3D + warna, varian, stok, jumlah, pesan via WhatsApp, link marketplace)
+- [x] Tahap 2: landing page, katalog (cari, filter lini/kategori), halaman produk (galeri, 3D + warna, varian, stok, jumlah, pesan via WhatsApp, link marketplace)
 - [ ] Tahap 3: keranjang, ongkir per zona, QRIS nominal otomatis, pesanan tersimpan
 - [ ] Tahap 4: halaman jasa servis, form + nomor tiket, cek status
 

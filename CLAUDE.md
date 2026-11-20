@@ -30,10 +30,22 @@ pocketbase/pb_hooks/        hook dan route khusus (*.pb.js); kode bersama lewat 
 web/                        proyek Astro
 ```
 
+## Struktur halaman
+
+| Rute | Isi |
+| --- | --- |
+| `/` | Landing page: hero, tiga kartu lini, produk pilihan (`unggulan`), cara pesan, info ongkir singkat |
+| `/katalog` | Pencarian, filter lini/kategori satu baris (tersimpan di URL `?lini=&kategori=`), grid produk |
+| `/produk/[kode]` | Detail produk: galeri, 3D + warna, varian, jumlah, pesan |
+| `/servis` | Jasa servis (placeholder "segera hadir" sampai tahap 5) |
+| `/404` | Halaman tidak ditemukan dengan maskot |
+
+Link "kembali ke katalog" selalu ke `/katalog`, bukan `/`.
+
 ## Data (koleksi PocketBase)
 
 - `kategori`: nama, slug, induk (relasi ke diri sendiri), urutan
-- `produk`: kode unik (`MDL-001`, `EDC-001`), nama, lini (`model3d` | `edc`), kategori, deskripsi (editor), foto[], model_3d (.glb, opsional), warna (JSON `[{nama, hex|null}]`), bagian_warna (JSON nama material), link_marketplace, aktif
+- `produk`: kode unik (`MDL-001`, `EDC-001`), nama, lini (`model3d` | `edc`), kategori, deskripsi (editor), foto[], model_3d (.glb, opsional), warna (JSON `[{nama, hex|null}]`), bagian_warna (JSON nama material), link_marketplace, aktif, unggulan (bool; tampil di "Produk pilihan" landing page, maks. 4, jika tidak ada pakai 4 produk terbaru)
 - `varian`: produk, kode unik (otomatis `<kode produk>-<n>` jika kosong), nama, harga, berat_kirim (gram), stok, preorder, foto[], urutan. **Setiap produk minimal punya 1 varian.** Harga, berat, dan stok selalu ada di varian.
 - `zona_ongkir`: nama, provinsi (JSON), tarif_per_kg, estimasi, urutan
 - `pesanan`: nomor, items (JSON), pembeli, wa, alamat, provinsi, zona, berat_ditagih_kg, subtotal, ongkir, potongan_ongkir, total, status_bayar (`menunggu` | `lunas` | `batal`), status_kirim, resi

@@ -5,7 +5,6 @@ import { LINI } from "../config";
 
 interface Props { produk: Produk }
 const { produk: p } = Astro.props;
-const hargaTeks = p.hargaMin === p.hargaMax ? rupiah(p.hargaMin) : `${rupiah(p.hargaMin)} – ${rupiah(p.hargaMax)}`;
 const warnaTitik = p.warna.filter((w) => w.hex);
 ---
 <a
@@ -24,7 +23,9 @@ const warnaTitik = p.warna.filter((w) => w.hex);
   <div class="info">
     <div class="kode">{p.kode} · {LINI[p.lini]}</div>
     <h3>{p.nama}</h3>
-    <div class="harga">{hargaTeks}</div>
+    <div class="harga">
+      <span>{rupiah(p.hargaMin)}</span>{p.hargaMax !== p.hargaMin && <> – <span>{rupiah(p.hargaMax)}</span></>}
+    </div>
     {!p.tersedia && <span class="badge habis">Stok habis</span>}
     {warnaTitik.length > 0 && (
       <div class="titik">{warnaTitik.map((w) => <span style={`background:${w.hex}`} title={w.nama}></span>)}</div>
@@ -47,6 +48,18 @@ const warnaTitik = p.warna.filter((w) => w.hex);
   }
   .info { padding: 12px 14px 14px; }
   h3 { margin: 2px 0 4px; font-size: 1rem; }
+  /* Rp tidak boleh terpisah dari angkanya; rentang harga boleh pindah baris di tanda pisah */
+  .harga span { white-space: nowrap; }
   .titik { display: flex; gap: 4px; margin-top: 8px; }
   .titik span { width: 12px; height: 12px; border-radius: 50%; border: 1px solid rgba(0, 0, 0, 0.15); }
+
+  /* HP (grid 2 kolom): kartu lebih rapat, teks lebih kecil */
+  @media (max-width: 559px) {
+    .kartu { border-radius: 12px; }
+    .info { padding: 8px 10px 10px; }
+    .kode { font-size: 0.68rem; }
+    h3 { font-size: 0.9rem; line-height: 1.3; overflow-wrap: anywhere; }
+    .harga { font-size: 0.85rem; }
+    .tag-3d { top: 6px; left: 6px; }
+  }
 </style>

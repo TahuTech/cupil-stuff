@@ -1,6 +1,7 @@
 ---
 import Base from "../layouts/Base.astro";
 import KartuProduk from "../components/KartuProduk.astro";
+import Maskot from "../components/Maskot.astro";
 import { ambilKatalog } from "../lib/pb";
 import { TOKO, LINI } from "../config";
 
@@ -20,6 +21,7 @@ const dataFilter = {
 <Base>
   <section class="hero">
     <h1><span class="sr-only">{TOKO.nama}: </span>{TOKO.tagline}</h1>
+    <Maskot ukuran={180} class="hero-maskot" />
   </section>
 
   <div class="toolbar">
@@ -141,8 +143,15 @@ const dataFilter = {
 </script>
 
 <style>
-  .hero { padding: 8px 0 0; }
-  .hero h1 { margin: 0; font-size: 1.05rem; font-weight: 500; color: var(--muted); line-height: 1.4; }
+  /* teks di kiri, maskot di kanan; maskot 110px di HP, 180px di desktop */
+  .hero { display: flex; align-items: center; gap: 40px; padding: 4px 0 0; }
+  .hero h1 { margin: 0; font-size: 1.35rem; font-weight: 600; line-height: 1.35; max-width: 34ch; }
+  .hero :global(.hero-maskot) { margin-right: 8px; }
+  @media (max-width: 559px) {
+    .hero { justify-content: space-between; gap: 12px; }
+    .hero h1 { font-size: 1.02rem; }
+    .hero :global(.hero-maskot) { width: 110px; margin-right: 0; }
+  }
   .toolbar { display: flex; flex-direction: column; gap: 12px; padding: 16px 0; }
   .toolbar input {
     padding: 10px 14px; border-radius: 999px; border: 1px solid var(--line);

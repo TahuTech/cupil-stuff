@@ -147,6 +147,11 @@ D. QRIS nominal otomatis (browser)
    - halaman sukses: nomor pesanan, rincian, gambar QR (library kecil, di-bundle), dan tombol
      "Kirim bukti bayar via WhatsApp" dengan pesan berisi nomor pesanan dan total
 
+E. Maskot
+   - saat barang berhasil masuk keranjang, panggil maskotSenang() dari web/src/lib/maskot.ts
+     (aman walau tidak ada maskot di halaman)
+   - halaman sukses: tampilkan maskot kecil dengan ekspresi senang, <Maskot ukuran={96} senangSaatMuncul />
+
 Uji alur penuh: tambah 2 barang, pilih provinsi, checkout, cek pesanan masuk di admin
 dengan total yang benar, dan scan QR dengan aplikasi bank/e-wallet (CUKUP SAMPAI LAYAR
 KONFIRMASI, jangan dibayar) untuk memastikan nama toko dan nominal benar.

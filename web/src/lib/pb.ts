@@ -41,12 +41,16 @@ export type Produk = {
 
 export type ZonaOngkir = { id: string; nama: string; provinsi: string[]; tarifPerKg: number; estimasi: string };
 
-// URL file: langsung dari R2 (lewat subdomain cdn) jika diatur, kalau tidak lewat PocketBase.
-// PocketBase menyimpan file di bucket dengan pola <collectionId>/<recordId>/<namaFile>.
-export const fileUrl = (rec: Rec, nama: string) =>
-  CDN_URL
-    ? `${CDN_URL}/${rec.collectionId}/${rec.id}/${nama}`
-    : `${PB_URL}/api/files/${rec.collectionId}/${rec.id}/${encodeURIComponent(nama)}`;
+// URL file:
+// - dev: relatif (/api/files/...), diteruskan proxy Vite ke PocketBase (lihat astro.config.mjs),
+//   supaya bisa dibuka dari HP lewat `npm run dev -- --host` walau PocketBase hanya di 127.0.0.1.
+// - build: langsung dari R2 (subdomain cdn) jika diatur, kalau tidak lewat PocketBase.
+//   PocketBase menyimpan file di bucket dengan pola <collectionId>/<recordId>/<namaFile>.
+export const fileUrl = (rec: Rec, nama: string) => {
+  const jalur = `${rec.collectionId}/${rec.id}/${encodeURIComponent(nama)}`;
+  if (import.meta.env.DEV) return `/api/files/${jalur}`;
+  return CDN_URL ? `${CDN_URL}/${jalur}` : `${PB_URL}/api/files/${jalur}`;
+};
 
 async function ambilSemua(koleksi: string, query: Record<string, string> = {}): Promise<Rec[]> {
   const hasil: Rec[] = [];

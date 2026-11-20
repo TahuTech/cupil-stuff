@@ -1,0 +1,21 @@
+/* Animasi maskot (badan penuh dan kepala). Global, bukan ber-scope:
+   SVG disisipkan lewat set:html dan bagiannya diubah dari JS (src/lib/maskot-mesin.ts). */
+.maskot {
+  cursor: pointer; touch-action: manipulation; -webkit-tap-highlight-color: transparent;
+  transition: transform 0.2s cubic-bezier(0.3, 1.7, 0.6, 1);
+}
+/* badan penuh: lompat kecil */
+.maskot.hop { transform: translateY(-16px) rotate(-3deg); }
+/* kepala di header: membesar sedikit di tempat (layout header tidak bergeser) */
+.maskot.pop { transform: scale(1.15) rotate(-6deg); }
+
+.maskot .lid { transform-box: fill-box; transform-origin: center top; transform: scaleY(0); transition: transform 0.08s; }
+.maskot.blink .lid { transform: scaleY(1); }
+.maskot .happy, .maskot .spark, .maskot .mulut-senang { opacity: 0; transition: opacity 0.1s; }
+.maskot.senang .happy, .maskot.senang .spark, .maskot.senang .mulut-senang { opacity: 1; }
+.maskot.senang .mata, .maskot.senang .mulut-biasa { opacity: 0; }
+
+@media (prefers-reduced-motion: reduce) {
+  .maskot, .maskot .lid { transition: none; }
+  .maskot.hop, .maskot.pop { transform: none; }
+}

@@ -1,0 +1,37 @@
+---
+// Kepala maskot untuk header. Desain: assets/maskot/maskot-kepala.svg (jangan diubah di sini).
+// Perilaku sama dengan maskot badan penuh (src/lib/maskot-mesin.ts), disesuaikan untuk ukuran kecil:
+// pupil lebih peka, dan saat diketuk "pop" di tempat (bukan lompat) supaya header tidak bergeser.
+import svg from "../../../assets/maskot/maskot-kepala.svg?raw";
+import "../styles/maskot.css";
+
+interface Props {
+  /** lebar dan tinggi dalam px (viewBox persegi) */
+  ukuran?: number;
+}
+const { ukuran = 38 } = Astro.props;
+---
+<span class="maskot-kepala-wadah" style={`--ukuran-kepala:${ukuran}px`} set:html={svg} />
+
+<style is:global>
+  .maskot-kepala-wadah { display: inline-block; width: var(--ukuran-kepala); height: var(--ukuran-kepala); line-height: 0; flex: none; }
+  .maskot-kepala-wadah .maskot { width: 100%; height: 100%; overflow: visible; }
+</style>
+
+<script>
+  import { pasangMaskot, senang, KEPALA } from "../lib/maskot-mesin";
+
+  document.querySelectorAll<HTMLElement>(".maskot-kepala-wadah:not([data-terpasang])").forEach((wadah) => {
+    const svg = wadah.querySelector<SVGSVGElement>("svg.maskot");
+    if (!svg) return;
+    wadah.dataset.terpasang = "1";
+    const m = pasangMaskot(svg, KEPALA);
+    svg.addEventListener("click", (e) => {
+      senang(m);
+      // Kepala biasanya ada di dalam link ke "/". Link tetap jalan,
+      // kecuali pengguna sudah di halaman tujuan: cukup tampilkan ekspresi senang.
+      const link = svg.closest("a");
+      if (link && new URL(link.href).pathname === location.pathname) e.preventDefault();
+    });
+  });
+</script>

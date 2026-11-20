@@ -1,5 +1,6 @@
 ---
 import { TOKO, linkWA } from "../config";
+import MaskotKepala from "../components/MaskotKepala.astro";
 
 interface Props {
   judul?: string;
@@ -18,6 +19,7 @@ const judulLengkap = judul ? `${judul} · ${TOKO.nama}` : `${TOKO.nama} · ${TOK
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <title>{judulLengkap}</title>
     <meta name="description" content={deskripsi} />
     <meta property="og:title" content={judulLengkap} />
@@ -29,12 +31,22 @@ const judulLengkap = judul ? `${judul} · ${TOKO.nama}` : `${TOKO.nama} · ${TOK
   </head>
   <body>
     <header class="topbar">
-      <a href="/" class="brand">{TOKO.nama}</a>
-      <nav>
-        <a href="/katalog" aria-current={aktif("/katalog")}>Katalog</a>
-        <a href="/servis" aria-current={aktif("/servis")}>Servis</a>
-        <a href={linkWA()} target="_blank" rel="noopener">WhatsApp</a>
-      </nav>
+      <div class="topbar-isi">
+        <a href="/" class="brand" aria-label={`${TOKO.nama}, ke halaman awal`}>
+          <MaskotKepala ukuran={38} />
+          <span>{TOKO.nama}</span>
+        </a>
+        <nav aria-label="Menu utama">
+          <a href="/katalog" aria-current={aktif("/katalog")}>Katalog</a>
+          <a href="/servis" aria-current={aktif("/servis")}>Servis</a>
+          <a class="nav-wa" href={linkWA()} target="_blank" rel="noopener" aria-label="WhatsApp" title="WhatsApp">
+            <svg class="ikon-wa" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 11.5a8.4 8.4 0 0 1-12.4 7.4L3 21l2.1-5.4A8.4 8.4 0 1 1 21 11.5z" />
+            </svg>
+            <span class="label-wa">WhatsApp</span>
+          </a>
+        </nav>
+      </div>
     </header>
     <main>
       <slot />
@@ -60,8 +72,11 @@ const judulLengkap = judul ? `${judul} · ${TOKO.nama}` : `${TOKO.nama} · ${TOK
     --line: #e4e2dd;
     --habis: #b42318;
     --radius: 14px;
+    --tinggi-header: 56px;
   }
   * { box-sizing: border-box; }
+  /* lompat ke anchor tidak tertutup header yang menempel */
+  html { scroll-padding-top: calc(var(--tinggi-header) + 12px); }
   body {
     margin: 0;
     font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
@@ -73,18 +88,37 @@ const judulLengkap = judul ? `${judul} · ${TOKO.nama}` : `${TOKO.nama} · ${TOK
   img { max-width: 100%; display: block; }
   main { max-width: 1100px; margin: 0 auto; padding: 0 20px 48px; }
 
+  main { padding-top: 12px; }
+
+  /* header menempel di atas saat scroll */
   .topbar {
-    max-width: 1100px; margin: 0 auto; padding: 16px 20px;
-    display: flex; justify-content: space-between; align-items: center;
+    position: sticky; top: 0; z-index: 50; height: var(--tinggi-header);
+    background: rgba(246, 245, 242, 0.94); border-bottom: 1px solid var(--line);
   }
-  .brand { font-weight: 700; font-size: 1.2rem; text-decoration: none; }
-  .topbar nav { display: flex; gap: 16px; }
-  .topbar nav a { text-decoration: none; color: var(--muted); }
+  @supports ((-webkit-backdrop-filter: blur(1px)) or (backdrop-filter: blur(1px))) {
+    .topbar {
+      background: rgba(246, 245, 242, 0.78);
+      -webkit-backdrop-filter: saturate(1.4) blur(12px); backdrop-filter: saturate(1.4) blur(12px);
+    }
+  }
+  .topbar-isi {
+    max-width: 1100px; height: 100%; margin: 0 auto; padding: 0 20px;
+    display: flex; justify-content: space-between; align-items: center; gap: 12px;
+  }
+  .brand { display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: 1.15rem; text-decoration: none; white-space: nowrap; }
+  .topbar nav { display: flex; align-items: center; gap: 18px; }
+  .topbar nav a { display: flex; align-items: center; gap: 6px; text-decoration: none; color: var(--muted); white-space: nowrap; }
   .topbar nav a:hover { color: var(--text); }
   .topbar nav a[aria-current="page"] { color: var(--text); font-weight: 600; }
-  @media (max-width: 400px) {
-    .topbar { padding: 14px 16px; }
-    .topbar nav { gap: 12px; font-size: 0.95rem; }
+  .ikon-wa { width: 20px; height: 20px; flex: none; }
+  /* HP: WhatsApp jadi ikon saja supaya semua muat satu baris mulai 360px */
+  @media (max-width: 480px) {
+    .topbar-isi { padding: 0 16px; }
+    .brand { font-size: 1.05rem; }
+    .topbar nav { gap: 14px; font-size: 0.95rem; }
+    .label-wa { display: none; }
+    .nav-wa { padding: 6px; margin: -6px; } /* area sentuh lebih besar */
+    .ikon-wa { width: 22px; height: 22px; }
   }
 
   footer { text-align: center; color: var(--muted); font-size: 0.9rem; padding: 24px; border-top: 1px solid var(--line); }

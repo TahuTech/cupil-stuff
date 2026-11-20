@@ -5,28 +5,31 @@ import { ambilKatalog } from "../lib/pb";
 import { TOKO, LINI } from "../config";
 
 const { kategori, produk } = await ambilKatalog();
-// hanya kategori yang punya produk
-const dipakai = new Set(produk.map((p) => p.kategori?.slug).filter(Boolean));
-const kategoriTampil = kategori.filter((k) => dipakai.has(k.slug));
+
+// Lini yang punya produk, beserta kategori milik lini itu (urutan mengikuti koleksi kategori).
 const liniTampil = Object.keys(LINI).filter((l) => produk.some((p) => p.lini === l));
+const dataFilter = {
+  lini: Object.fromEntries(
+    liniTampil.map((l) => {
+      const slug = new Set(produk.filter((p) => p.lini === l).map((p) => p.kategori?.slug));
+      return [l, { nama: LINI[l], kategori: kategori.filter((k) => slug.has(k.slug)).map((k) => ({ slug: k.slug, nama: k.nama })) }];
+    }),
+  ),
+};
 ---
 <Base>
   <section class="hero">
-    <h1>{TOKO.nama}</h1>
-    <p>{TOKO.tagline}</p>
+    <h1><span class="sr-only">{TOKO.nama}: </span>{TOKO.tagline}</h1>
   </section>
 
   <div class="toolbar">
     <input id="cari" type="search" placeholder="Cari kode atau nama produk…" aria-label="Cari produk" />
-    <div class="chips" id="filter-lini">
-      <button class="chip aktif" data-lini="">Semua</button>
-      {liniTampil.map((l) => <button class="chip" data-lini={l}>{LINI[l]}</button>)}
-    </div>
-    {kategoriTampil.length > 1 && (
-      <div class="chips" id="filter-kategori">
-        <button class="chip aktif" data-kategori="">Semua kategori</button>
-        {kategoriTampil.map((k) => <button class="chip" data-kategori={k.slug}>{k.nama}</button>)}
-      </div>
+    {liniTampil.length > 0 && (
+      <nav class="filter" id="filter" aria-label="Filter produk">
+        <!-- isi awal untuk tanpa JavaScript; dirender ulang oleh skrip sesuai URL -->
+        <button class="chip aktif" data-lini="">Semua</button>
+        {liniTampil.map((l) => <button class="chip" data-lini={l}>{LINI[l]}</button>)}
+      </nav>
     )}
   </div>
 
@@ -34,22 +37,89 @@ const liniTampil = Object.keys(LINI).filter((l) => produk.some((p) => p.lini ===
     {produk.map((p) => <KartuProduk produk={p} />)}
   </section>
   <p class="kosong" id="kosong" hidden>Produk tidak ditemukan.</p>
+
+  <script type="application/json" id="data-filter" set:html={JSON.stringify(dataFilter)} />
 </Base>
 
 <script>
+  type DataFilter = { lini: Record<string, { nama: string; kategori: { slug: string; nama: string }[] }> };
+
+  const data: DataFilter = JSON.parse(document.getElementById("data-filter")!.textContent!);
   const cari = document.getElementById("cari") as HTMLInputElement;
+  const filter = document.getElementById("filter");
   const kartu = [...document.querySelectorAll<HTMLElement>("#grid .kartu")];
   const kosong = document.getElementById("kosong")!;
-  let lini = "";
-  let kategori = "";
 
+  // ---------- state dari URL (?lini=edc&kategori=pisau) ----------
+  type State = { lini: string; kategori: string };
+  function bacaUrl(): State {
+    const q = new URLSearchParams(location.search);
+    const lini = q.get("lini") ?? "";
+    if (!data.lini[lini]) return { lini: "", kategori: "" };
+    const daftar = data.lini[lini].kategori;
+    // kategori hanya berlaku jika milik lini itu dan lini punya lebih dari 1 kategori
+    const kategori = q.get("kategori") ?? "";
+    return { lini, kategori: daftar.length > 1 && daftar.some((k) => k.slug === kategori) ? kategori : "" };
+  }
+  function keUrl(s: State) {
+    const q = new URLSearchParams();
+    if (s.lini) q.set("lini", s.lini);
+    if (s.kategori) q.set("kategori", s.kategori);
+    const cariUrl = q.toString();
+    return `${location.pathname}${cariUrl ? `?${cariUrl}` : ""}${location.hash}`;
+  }
+
+  let state = bacaUrl();
+
+  // ---------- baris pill ----------
+  function pill(teks: string, aktif: boolean, set: Partial<State> | "kembali", kecil = false) {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.className = `chip${aktif ? " aktif" : ""}${kecil ? " kecil" : ""}${set === "kembali" ? " kembali" : ""}`;
+    b.textContent = teks;
+    if (aktif) b.setAttribute("aria-pressed", "true");
+    b.addEventListener("click", () => {
+      const baru: State = set === "kembali" ? { lini: "", kategori: "" } : { lini: set.lini ?? state.lini, kategori: set.kategori ?? "" };
+      if (baru.lini === state.lini && baru.kategori === state.kategori) return;
+      state = baru;
+      history.pushState(null, "", keUrl(state));
+      terapkan();
+    });
+    return b;
+  }
+
+  function renderFilter() {
+    if (!filter) return;
+    const isi: HTMLButtonElement[] = [];
+    if (!state.lini) {
+      isi.push(pill("Semua", true, { lini: "" }));
+      for (const [kode, l] of Object.entries(data.lini)) isi.push(pill(l.nama, false, { lini: kode }));
+    } else {
+      const l = data.lini[state.lini];
+      isi.push(pill("← Kembali", false, "kembali", true));
+      isi.push(pill(`Semua ${l.nama}`, !state.kategori, { lini: state.lini, kategori: "" }, true));
+      if (l.kategori.length > 1) {
+        for (const k of l.kategori) isi.push(pill(k.nama, state.kategori === k.slug, { lini: state.lini, kategori: k.slug }, true));
+      }
+    }
+    filter.replaceChildren(...isi);
+    filter.classList.toggle("tingkat-2", !!state.lini);
+    // pastikan pill aktif terlihat jika baris di-scroll
+    // (hanya jika pill aktif terpotong di kanan; selain itu baris mulai dari awal)
+    const aktif = filter.querySelector<HTMLElement>(".aktif");
+    const kiri = aktif ? aktif.getBoundingClientRect().left - filter.getBoundingClientRect().left : 0;
+    const terpotong = aktif && kiri + aktif.offsetWidth > filter.clientWidth - 20;
+    filter.scrollTo({ left: terpotong ? kiri - 20 : 0, behavior: "instant" });
+  }
+
+  // ---------- saring kartu ----------
   function saring() {
     const q = cari.value.trim().toLowerCase();
     let tampil = 0;
     for (const k of kartu) {
       const cocok =
-        (!lini || k.dataset.lini === lini) &&
-        (!kategori || k.dataset.kategori === kategori) &&
+        (!state.lini || k.dataset.lini === state.lini) &&
+        (!state.kategori || k.dataset.kategori === state.kategori) &&
         (!q || (k.dataset.cari ?? "").includes(q));
       k.hidden = !cocok;
       if (cocok) tampil++;
@@ -57,33 +127,48 @@ const liniTampil = Object.keys(LINI).filter((l) => produk.some((p) => p.lini ===
     kosong.hidden = tampil > 0;
   }
 
-  function pasangChip(idGrup: string, atur: (nilai: string) => void, atribut: string) {
-    const grup = document.getElementById(idGrup);
-    if (!grup) return;
-    grup.addEventListener("click", (e) => {
-      const tombol = (e.target as HTMLElement).closest("button");
-      if (!tombol) return;
-      grup.querySelectorAll("button").forEach((b) => b.classList.toggle("aktif", b === tombol));
-      atur(tombol.getAttribute(atribut) ?? "");
-      saring();
-    });
+  function terapkan() {
+    renderFilter();
+    saring();
   }
 
-  pasangChip("filter-lini", (v) => (lini = v), "data-lini");
-  pasangChip("filter-kategori", (v) => (kategori = v), "data-kategori");
+  window.addEventListener("popstate", () => {
+    state = bacaUrl();
+    terapkan();
+  });
   cari.addEventListener("input", saring);
+  terapkan();
 </script>
 
 <style>
-  .hero { padding: 16px 0 8px; }
-  .hero h1 { margin: 0; font-size: 1.8rem; }
-  .hero p { margin: 4px 0 0; color: var(--muted); }
-  .toolbar { display: flex; flex-direction: column; gap: 10px; padding: 16px 0; }
+  .hero { padding: 8px 0 0; }
+  .hero h1 { margin: 0; font-size: 1.05rem; font-weight: 500; color: var(--muted); line-height: 1.4; }
+  .toolbar { display: flex; flex-direction: column; gap: 12px; padding: 16px 0; }
   .toolbar input {
     padding: 10px 14px; border-radius: 999px; border: 1px solid var(--line);
     font-size: 1rem; background: #fff; max-width: 420px;
   }
-  .chips { display: flex; flex-wrap: wrap; gap: 8px; }
+
+  /* Satu baris pill, scroll horizontal tanpa scrollbar terlihat */
+  .filter {
+    display: flex; flex-wrap: nowrap; gap: 8px; align-items: center;
+    overflow-x: auto; overscroll-behavior-x: contain;
+    scroll-snap-type: x proximity; scroll-padding-inline: 20px; scroll-behavior: smooth;
+    scrollbar-width: none;
+    /* pill boleh menempel ke tepi layar saat di-scroll, tetap sejajar dengan konten */
+    margin-inline: -20px; padding: 2px 20px;
+    min-height: 42px;
+  }
+  .filter::-webkit-scrollbar { display: none; }
+  .filter :global(.chip) { flex: 0 0 auto; white-space: nowrap; scroll-snap-align: start; }
+  .filter :global(.chip.kecil) { padding: 6px 12px; font-size: 0.85rem; }
+  .filter :global(.chip.kembali) { color: var(--muted); }
+
   .grid { display: grid; gap: 16px; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); }
   .kosong { text-align: center; color: var(--muted); padding: 40px; }
+
+  /* HP: 2 kolom tetap mulai lebar 320px */
+  @media (max-width: 559px) {
+    .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+  }
 </style>

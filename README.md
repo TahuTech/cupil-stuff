@@ -98,7 +98,8 @@ Data diambil dari PocketBase **saat build**. Kalau ada perubahan produk saat `np
 
 - Hubungkan repo GitHub, dengan **Root directory** `web`
 - Build command `npm run build`, output `dist`
-- Environment variables: `PUBLIC_PB_URL=https://api.<domain>`, `PUBLIC_CDN_URL=https://cdn.<domain>`, `PUBLIC_SITE_URL=https://<domain>`
+- Environment variables: `PUBLIC_PB_URL=https://api.<domain>`, `PUBLIC_CDN_URL=https://cdn.<domain>`, `PUBLIC_SITE_URL=https://<domain>`, dan `PUBLIC_QRIS_STATIS` (teks QRIS statis toko; lihat bagian Pembayaran)
+- Di `.env` homelab, isi `PB_ORIGINS=https://<domain>` supaya browser boleh memanggil `/api/checkout` (CORS), lalu `docker compose up -d` lagi.
 - **Settings → Builds → Deploy hooks**: buat hook, lalu isi URL-nya ke `PAGES_DEPLOY_HOOK` di `.env` homelab, kemudian `docker compose up -d` lagi. Setiap perubahan produk akan memicu build ulang, paling banyak sekali per 60 detik.
 
 ## Mengisi produk
@@ -116,11 +117,22 @@ Urutannya: **kategori → produk → varian**.
 - Ganti `nomorWA` di `web/src/config.ts`.
 - Jika desain kepala maskot (`assets/maskot/maskot-kepala.svg`) berubah, buat ulang favicon dengan `python3 scripts/buat-favicon.py` (butuh `rsvg-convert`).
 
+## Pesanan dan pembayaran
+
+1. Pembeli memasukkan barang ke keranjang (tersimpan di browser), memilih provinsi, lalu mengisi nama, WhatsApp, dan alamat.
+2. `POST /api/checkout` menghitung ulang semuanya di server (harga, stok, berat, zona, ongkir, potongan, total) dan menyimpan pesanan `CS-YYMMDD-XXXX` dengan status bayar **menunggu**.
+3. Halaman pesanan berhasil menampilkan QRIS dengan nominal total. Pembeli mengirim bukti bayar lewat WhatsApp.
+4. Pemilik mengecek mutasi, lalu mengubah status bayar menjadi **lunas** di panel admin (pengurangan stok otomatis: tahap 4).
+
+Di atas 5 kg atau provinsi tanpa zona: pesanan tetap tersimpan dengan `ongkir_konfirmasi`, QRIS tidak ditampilkan, dan pembeli diarahkan ke WhatsApp.
+
+**Teks QRIS toko** (`PUBLIC_QRIS_STATIS`): scan stiker QRIS dengan aplikasi pembaca QR, salin teksnya (diawali `000201`), lalu isi di `web/.env` dan di environment variables Cloudflare Pages. Jangan commit nilainya. Uji dengan scan dari aplikasi bank/e-wallet sampai layar konfirmasi saja (jangan dibayar), pastikan nama toko dan nominalnya benar.
+
 ## Status
 
 - [x] Tahap 1: PocketBase, skema, zona ongkir, hook build ulang
 - [x] Tahap 2: landing page, katalog (cari, filter lini/kategori), halaman produk (galeri, 3D + warna, varian, stok, jumlah, pesan via WhatsApp, link marketplace)
-- [ ] Tahap 3: keranjang, ongkir per zona, QRIS nominal otomatis, pesanan tersimpan
+- [x] Tahap 3: keranjang, ongkir per zona, checkout (`POST /api/checkout`, hitung ulang di server), QRIS nominal otomatis, pesanan tersimpan
 - [ ] Tahap 4: halaman jasa servis, form + nomor tiket, cek status
 
 ## Catatan

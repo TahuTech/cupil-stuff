@@ -37,10 +37,14 @@ web/                        proyek Astro
 | `/` | Landing page: hero, tiga kartu lini, produk pilihan (`unggulan`), cara pesan, info ongkir singkat |
 | `/katalog` | Pencarian, filter lini/kategori satu baris (tersimpan di URL `?lini=&kategori=`), grid produk |
 | `/produk/[kode]` | Detail produk: galeri, 3D + warna, varian, jumlah, pesan |
+| `/keranjang` | Keranjang (localStorage: id varian, jumlah, warna), ongkir per provinsi, form checkout |
+| `/pesanan-berhasil` | Hasil checkout: maskot senang, nomor, rincian dari server, QRIS bernominal (kecuali ongkir perlu konfirmasi), tombol kirim bukti bayar |
 | `/servis` | Jasa servis (placeholder "segera hadir" sampai tahap 5) |
 | `/404` | Halaman tidak ditemukan dengan maskot |
 
 Link "kembali ke katalog" selalu ke `/katalog`, bukan `/`.
+
+Build memakai `build.format: "file"` (`/katalog` → `katalog.html`). Route API khusus: `POST /api/checkout` (`pb_hooks/checkout.pb.js`); CORS diatur lewat `PB_ORIGINS` (flag `--origins` di compose).
 
 ## Data (koleksi PocketBase)
 
@@ -48,7 +52,7 @@ Link "kembali ke katalog" selalu ke `/katalog`, bukan `/`.
 - `produk`: kode unik (`MDL-001`, `EDC-001`), nama, lini (`model3d` | `edc`), kategori, deskripsi (editor), foto[], model_3d (.glb, opsional), warna (JSON `[{nama, hex|null}]`), bagian_warna (JSON nama material), link_marketplace, aktif, unggulan (bool; tampil di "Produk pilihan" landing page, maks. 4, jika tidak ada pakai 4 produk terbaru)
 - `varian`: produk, kode unik (otomatis `<kode produk>-<n>` jika kosong), nama, harga, berat_kirim (gram), stok, preorder, foto[], urutan. **Setiap produk minimal punya 1 varian.** Harga, berat, dan stok selalu ada di varian.
 - `zona_ongkir`: nama, provinsi (JSON), tarif_per_kg, estimasi, urutan
-- `pesanan`: nomor, items (JSON), pembeli, wa, alamat, provinsi, zona, berat_ditagih_kg, subtotal, ongkir, potongan_ongkir, total, status_bayar (`menunggu` | `lunas` | `batal`), status_kirim, resi
+- `pesanan`: nomor (`CS-YYMMDD-XXXX`), items (JSON), pembeli, wa (`628…`), alamat, provinsi, zona, berat_gram, berat_ditagih_kg, subtotal, ongkir, potongan_ongkir, total, ongkir_konfirmasi (bool: di atas 5 kg atau zona tidak ditemukan; total = subtotal dan QRIS tidak ditampilkan), status_bayar (`menunggu` | `lunas` | `batal`), status_kirim, resi
 - `jasa`: kode (`SRV-001`), nama, perangkat, deskripsi, harga_mulai, estimasi, aktif
 - `tiket_servis`: nomor, jasa, nama, wa, perangkat, keluhan, foto[], cara_kirim (`kurir` | `antar`), estimasi_biaya, biaya_final, status
 - `portofolio`: judul, foto_sebelum, foto_sesudah, keterangan
@@ -93,5 +97,7 @@ Stok EDC dipakai bersama dengan marketplace dan diperbarui manual oleh pemilik. 
 - Kunci versi PocketBase di Dockerfile atau compose. Jangan pakai `latest` untuk PocketBase.
 - Hook PocketBase: handler berjalan terpisah, jadi variabel di luar handler tidak bisa dibaca. Kode bersama ditaruh di modul dan dipanggil dengan `require()`.
 - Setiap logika hitungan (ongkir, potongan, total, nominal QRIS, CRC) harus punya unit test.
+- Hitungan ongkir ada di dua tempat: `web/src/lib/ongkir.ts` dan `pocketbase/pb_hooks/ongkir.js`. Ubah keduanya bersamaan; `ongkir-hook.test.ts` memastikan hasilnya sama.
+- Isi `PUBLIC_QRIS_STATIS` jangan pernah ditampilkan atau dicatat di log, laporan, maupun commit.
 - Sebelum menyatakan selesai: jalankan `npm run build` di `web/`, dan untuk perubahan PocketBase jalankan `docker compose up -d --build` lalu cek `docker compose logs pocketbase`.
 - Satu tahap = satu branch atau commit yang rapi, dengan pesan commit Bahasa Indonesia.

@@ -32,3 +32,28 @@ export function hitungOngkir(totalGram: number, tarifPerKg: number, subtotal: nu
   const potongan = potonganOngkir(subtotal, ongkir);
   return { otomatis: true, beratKg, ongkir, potongan, dibayar: ongkir - potongan };
 }
+
+export type ZonaRingkas = { id: string; nama: string; provinsi: string[]; tarifPerKg: number; estimasi: string };
+
+/** Zona untuk sebuah provinsi ("Kota Surabaya" punya zona sendiri), atau null jika tidak ada. */
+export function cariZona<Z extends { provinsi: string[] }>(provinsi: string, daftarZona: Z[]): Z | null {
+  return daftarZona.find((z) => z.provinsi.includes(provinsi)) ?? null;
+}
+
+export type RingkasanBayar =
+  | { otomatis: true; beratKg: number; ongkir: number; potongan: number; total: number }
+  | { otomatis: false; beratKg: number; alasan: string; total: number };
+
+/**
+ * Total yang dibayar = subtotal + ongkir − potongan.
+ * Jika ongkir tidak bisa dihitung otomatis (lebih dari 5 kg atau zona tidak ada),
+ * total hanya subtotal dan ongkir dikonfirmasi via WhatsApp.
+ */
+export function ringkasBayar(subtotal: number, totalGram: number, zona: { tarifPerKg: number } | null): RingkasanBayar {
+  if (!zona) {
+    return { otomatis: false, beratKg: beratDitagihKg(totalGram), alasan: "Zona pengiriman tidak ditemukan, ongkir dikonfirmasi via WhatsApp", total: subtotal };
+  }
+  const h = hitungOngkir(totalGram, zona.tarifPerKg, subtotal);
+  if (!h.otomatis) return { otomatis: false, beratKg: h.beratKg, alasan: h.alasan, total: subtotal };
+  return { otomatis: true, beratKg: h.beratKg, ongkir: h.ongkir, potongan: h.potongan, total: subtotal + h.dibayar };
+}

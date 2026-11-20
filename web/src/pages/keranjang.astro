@@ -1,10 +1,16 @@
 ---
 import Base from "../layouts/Base.astro";
 import Maskot from "../components/Maskot.astro";
-import { ambilKatalog, dataVarianKeranjang } from "../lib/pb";
+import { ambilKatalog, ambilZonaOngkir, dataVarianKeranjang } from "../lib/pb";
 
 const { produk } = await ambilKatalog();
 const dataVarian = dataVarianKeranjang(produk);
+const zona = await ambilZonaOngkir();
+// daftar provinsi untuk pilihan ongkir: Kota Surabaya paling atas, lalu urut abjad
+const provinsi = zona
+  .flatMap((z) => z.provinsi)
+  .sort((a, b) => (a === "Kota Surabaya" ? -1 : b === "Kota Surabaya" ? 1 : a.localeCompare(b, "id")));
+const labelProvinsi = (p: string) => (p === "Jawa Timur" ? "Jawa Timur (selain Kota Surabaya)" : p);
 ---
 <Base judul="Keranjang" deskripsi="Keranjang belanja Cupil Stuff.">
   <h1 class="judul">Keranjang</h1>
@@ -24,12 +30,32 @@ const dataVarian = dataVarianKeranjang(produk);
       <dl>
         <div><dt>Subtotal (<span id="jumlah-barang">0</span> barang)</dt><dd id="subtotal">Rp 0</dd></div>
       </dl>
+
+      <label class="label-provinsi" for="provinsi">Dikirim ke provinsi</label>
+      <select id="provinsi" name="provinsi" required>
+        <option value="">Pilih provinsi</option>
+        {provinsi.map((p) => <option value={p}>{labelProvinsi(p)}</option>)}
+      </select>
+
+      <div id="ongkir" hidden>
+        <p class="zona" id="info-zona"></p>
+        <dl>
+          <div><dt>Berat ditagih</dt><dd id="berat"></dd></div>
+          <div id="baris-ongkir"><dt>Ongkir J&amp;T</dt><dd id="ongkir-nilai"></dd></div>
+          <div id="baris-potongan"><dt>Potongan ongkir</dt><dd id="potongan" class="potongan"></dd></div>
+        </dl>
+        <p class="konfirmasi" id="ongkir-konfirmasi" hidden></p>
+        <dl class="total">
+          <div><dt>Total</dt><dd id="total"></dd></div>
+        </dl>
+      </div>
     </aside>
   </div>
 
   <noscript><p>Keranjang membutuhkan JavaScript. Kamu tetap bisa pesan lewat WhatsApp di halaman produk.</p></noscript>
 
   <script type="application/json" id="data-varian" set:html={JSON.stringify(dataVarian)} />
+  <script type="application/json" id="data-zona" set:html={JSON.stringify(zona)} />
 </Base>
 
 <script>
@@ -130,6 +156,47 @@ const dataVarian = dataVarianKeranjang(produk);
     window.dispatchEvent(new CustomEvent("keranjang:ringkasan", { detail: r }));
   }
 
+  // ---------- ongkir (data zona dari build) ----------
+  import { cariZona, ringkasBayar, type ZonaRingkas } from "../lib/ongkir";
+  const daftarZona: ZonaRingkas[] = JSON.parse(document.getElementById("data-zona")!.textContent!);
+  const pilihProvinsi = $("provinsi") as HTMLSelectElement;
+  const KUNCI_PROVINSI = "cupil:provinsi";
+  try {
+    const tersimpan = localStorage.getItem(KUNCI_PROVINSI);
+    if (tersimpan && [...pilihProvinsi.options].some((o) => o.value === tersimpan)) pilihProvinsi.value = tersimpan;
+  } catch {}
+
+  let ringkasanTerakhir: ReturnType<typeof ringkasKeranjang> | null = null;
+  function renderOngkir() {
+    const r = ringkasanTerakhir;
+    const prov = pilihProvinsi.value;
+    $("ongkir").hidden = !r || !prov || r.jumlahBarang === 0;
+    if (!r || !prov) return;
+    const zona = cariZona(prov, daftarZona);
+    const bayar = ringkasBayar(r.subtotal, r.beratGram, zona);
+    $("info-zona").textContent = zona ? `Zona ${zona.nama} · estimasi ${zona.estimasi}` : "Zona tidak ditemukan";
+    $("berat").textContent = `${bayar.beratKg} kg`;
+    $("baris-ongkir").hidden = $("baris-potongan").hidden = !bayar.otomatis;
+    $("ongkir-konfirmasi").hidden = bayar.otomatis;
+    if (bayar.otomatis) {
+      $("ongkir-nilai").textContent = rupiah(bayar.ongkir);
+      $("potongan").textContent = bayar.potongan ? `− ${rupiah(bayar.potongan)}` : rupiah(0);
+      $("total").textContent = rupiah(bayar.total);
+    } else {
+      $("ongkir-konfirmasi").textContent = bayar.alasan.replace(/, ongkir/, ". Ongkir");
+      $("total").textContent = `${rupiah(bayar.total)} + ongkir`;
+    }
+    window.dispatchEvent(new CustomEvent("keranjang:bayar", { detail: { provinsi: prov, zona, bayar, ringkasan: r } }));
+  }
+  window.addEventListener("keranjang:ringkasan", (e) => {
+    ringkasanTerakhir = (e as CustomEvent<ReturnType<typeof ringkasKeranjang>>).detail;
+    renderOngkir();
+  });
+  pilihProvinsi.addEventListener("change", () => {
+    try { localStorage.setItem(KUNCI_PROVINSI, pilihProvinsi.value); } catch {}
+    renderOngkir();
+  });
+
   window.addEventListener(EVENT_BERUBAH, render);
   window.addEventListener("storage", render);
   render();
@@ -174,4 +241,14 @@ const dataVarian = dataVarianKeranjang(produk);
   .ringkasan :global(dl > div) { display: flex; justify-content: space-between; gap: 12px; }
   .ringkasan :global(dt) { color: var(--muted); }
   .ringkasan :global(dd) { margin: 0; font-weight: 600; text-align: right; }
+  .label-provinsi { display: block; margin: 16px 0 6px; font-size: 0.9rem; color: var(--muted); }
+  select, .ringkasan :global(input), .ringkasan :global(textarea) {
+    width: 100%; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px;
+    background: #fff; font: inherit; color: var(--text);
+  }
+  .zona { margin: 10px 0 8px; font-size: 0.85rem; color: var(--muted); }
+  .potongan { color: #1a7f37; }
+  .konfirmasi { margin: 10px 0 0; padding: 10px 12px; border-radius: 10px; background: #fff3cd; color: #7a5b00; font-size: 0.9rem; }
+  .total { margin-top: 12px !important; padding-top: 12px; border-top: 1px solid var(--line); }
+  .total :global(dt), .total :global(dd) { color: var(--text); font-size: 1.15rem; font-weight: 700; }
 </style>

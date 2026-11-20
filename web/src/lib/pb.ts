@@ -160,3 +160,29 @@ export function pilihProdukUnggulan(produk: Produk[], maks = 4): Produk[] {
   if (unggulan.length) return unggulan.slice(0, maks);
   return [...produk].sort((a, b) => b.dibuat.localeCompare(a.dibuat)).slice(0, maks);
 }
+
+/** Data varian untuk halaman keranjang: harga, stok, dan berat selalu dari build terbaru. */
+export function dataVarianKeranjang(produk: Produk[]): Record<string, import("./keranjang").InfoVarian> {
+  const hasil: Record<string, import("./keranjang").InfoVarian> = {};
+  for (const p of produk) {
+    for (const v of p.varian) {
+      hasil[v.id] = {
+        id: v.id,
+        kode: v.kode,
+        nama: v.nama,
+        harga: v.harga,
+        beratKirim: v.beratKirim,
+        stok: v.stok,
+        preorder: v.preorder,
+        produk: {
+          kode: p.kode,
+          nama: p.nama,
+          foto: v.foto[0] ?? p.foto[0] ?? null,
+          jumlahVarian: p.varian.length,
+          warna: p.warna.map((w) => w.nama),
+        },
+      };
+    }
+  }
+  return hasil;
+}

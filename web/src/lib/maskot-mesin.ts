@@ -145,3 +145,8 @@ export function pasangMaskot(svg: SVGSVGElement, jenis: JenisMaskot, opsi: { sen
   if (opsi.senangAwal) senang(m);
   return m;
 }
+
+/** Ekspresi senang pada kepala maskot di header (misalnya saat barang masuk keranjang). */
+export function senangKepala() {
+  for (const m of semua) if (m.jenis === KEPALA) senang(m);
+}

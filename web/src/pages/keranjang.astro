@@ -1,0 +1,177 @@
+---
+import Base from "../layouts/Base.astro";
+import Maskot from "../components/Maskot.astro";
+import { ambilKatalog, dataVarianKeranjang } from "../lib/pb";
+
+const { produk } = await ambilKatalog();
+const dataVarian = dataVarianKeranjang(produk);
+---
+<Base judul="Keranjang" deskripsi="Keranjang belanja Cupil Stuff.">
+  <h1 class="judul">Keranjang</h1>
+
+  <section class="kosong" id="kosong" hidden>
+    <Maskot ukuran={130} />
+    <p>Keranjangmu masih kosong.</p>
+    <a class="tombol utama" href="/katalog">Lihat katalog</a>
+  </section>
+
+  <div class="tata" id="isi" hidden>
+    <section aria-label="Daftar barang">
+      <ul class="daftar" id="daftar"></ul>
+    </section>
+
+    <aside class="ringkasan" aria-label="Ringkasan belanja">
+      <dl>
+        <div><dt>Subtotal (<span id="jumlah-barang">0</span> barang)</dt><dd id="subtotal">Rp 0</dd></div>
+      </dl>
+    </aside>
+  </div>
+
+  <noscript><p>Keranjang membutuhkan JavaScript. Kamu tetap bisa pesan lewat WhatsApp di halaman produk.</p></noscript>
+
+  <script type="application/json" id="data-varian" set:html={JSON.stringify(dataVarian)} />
+</Base>
+
+<script>
+  import {
+    bacaKeranjang, ringkasKeranjang, ubahJumlah, hapusDariKeranjang, batasStok,
+    EVENT_BERUBAH, type InfoVarian, type BarisKeranjang,
+  } from "../lib/keranjang";
+  import { rupiah } from "../lib/format";
+
+  const dataVarian: Record<string, InfoVarian> = JSON.parse(document.getElementById("data-varian")!.textContent!);
+  const $ = (id: string) => document.getElementById(id)!;
+
+  const LABEL_STATUS: Record<BarisKeranjang["status"], string> = {
+    ok: "",
+    hilang: "Sudah tidak dijual, tidak ikut dipesan",
+    habis: "Stok habis, tidak ikut dipesan",
+    dikurangi: "Jumlah disesuaikan dengan stok",
+  };
+
+  function el<K extends keyof HTMLElementTagNameMap>(tag: K, kelas?: string, teks?: string) {
+    const e = document.createElement(tag);
+    if (kelas) e.className = kelas;
+    if (teks !== undefined) e.textContent = teks;
+    return e;
+  }
+
+  function barisItem(b: BarisKeranjang) {
+    const li = el("li", `item status-${b.status}`);
+    const info = b.info;
+
+    const foto = el("div", "foto");
+    if (info?.produk.foto) {
+      const img = el("img");
+      img.src = info.produk.foto;
+      img.alt = "";
+      img.loading = "lazy";
+      foto.appendChild(img);
+    }
+    li.appendChild(foto);
+
+    const teks = el("div", "teks");
+    if (info) {
+      const a = el("a", "nama", info.produk.nama);
+      (a as HTMLAnchorElement).href = `/produk/${info.produk.kode}`;
+      teks.appendChild(a);
+      const detail = [info.produk.jumlahVarian > 1 ? info.nama : "", b.warna ? `Warna ${b.warna}` : "", info.kode].filter(Boolean);
+      teks.appendChild(el("div", "detail", detail.join(" · ")));
+      teks.appendChild(el("div", "harga-satuan", rupiah(info.harga)));
+    } else {
+      teks.appendChild(el("div", "nama", "Produk tidak ditemukan"));
+    }
+    if (b.status !== "ok") teks.appendChild(el("div", "peringatan", LABEL_STATUS[b.status]));
+    li.appendChild(teks);
+
+    const aksi = el("div", "aksi-item");
+    if (info && b.status !== "habis") {
+      const batas = batasStok(info);
+      const kotak = el("div", "jumlah");
+      const kurang = el("button", "", "−");
+      const isian = el("input");
+      const tambah = el("button", "", "+");
+      kurang.type = tambah.type = "button";
+      kurang.setAttribute("aria-label", `Kurangi ${info.produk.nama}`);
+      tambah.setAttribute("aria-label", `Tambah ${info.produk.nama}`);
+      isian.type = "number";
+      isian.min = "1";
+      isian.max = String(batas);
+      isian.inputMode = "numeric";
+      isian.value = String(b.jumlahDipakai);
+      isian.setAttribute("aria-label", `Jumlah ${info.produk.nama}`);
+      const atur = (n: number) => ubahJumlah(b.varian, b.warna, Math.min(Math.max(1, n), batas));
+      kurang.disabled = b.jumlahDipakai <= 1;
+      tambah.disabled = b.jumlahDipakai >= batas;
+      kurang.addEventListener("click", () => atur(b.jumlahDipakai - 1));
+      tambah.addEventListener("click", () => atur(b.jumlahDipakai + 1));
+      isian.addEventListener("change", () => atur(Number(isian.value) || 1));
+      kotak.append(kurang, isian, tambah);
+      aksi.appendChild(kotak);
+      aksi.appendChild(el("div", "subtotal-item", rupiah(b.subtotal)));
+    }
+    const hapus = el("button", "hapus", "Hapus");
+    hapus.type = "button";
+    hapus.setAttribute("aria-label", `Hapus ${info?.produk.nama ?? "barang"} dari keranjang`);
+    hapus.addEventListener("click", () => hapusDariKeranjang(b.varian, b.warna));
+    aksi.appendChild(hapus);
+    li.appendChild(aksi);
+    return li;
+  }
+
+  function render() {
+    const items = bacaKeranjang();
+    const r = ringkasKeranjang(items, dataVarian);
+    $("kosong").hidden = items.length > 0;
+    $("isi").hidden = items.length === 0;
+    $("daftar").replaceChildren(...r.baris.map(barisItem));
+    $("jumlah-barang").textContent = String(r.jumlahBarang);
+    $("subtotal").textContent = rupiah(r.subtotal);
+    window.dispatchEvent(new CustomEvent("keranjang:ringkasan", { detail: r }));
+  }
+
+  window.addEventListener(EVENT_BERUBAH, render);
+  window.addEventListener("storage", render);
+  render();
+</script>
+
+<style>
+  .judul { margin: 4px 0 16px; font-size: 1.5rem; }
+  .kosong { display: flex; flex-direction: column; align-items: center; text-align: center; padding: 24px 0; }
+  .kosong p { margin: 16px 0 20px; color: var(--muted); }
+
+  .tata { display: grid; grid-template-columns: minmax(0, 1fr) 360px; gap: 28px; align-items: start; }
+  .ringkasan {
+    position: sticky; top: calc(var(--tinggi-header) + 16px);
+    background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); padding: 18px;
+  }
+  @media (max-width: 859px) {
+    .tata { grid-template-columns: minmax(0, 1fr); }
+    .ringkasan { position: static; }
+  }
+
+  .daftar { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+  .daftar :global(.item) {
+    display: grid; grid-template-columns: 72px minmax(0, 1fr); gap: 4px 12px;
+    background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); padding: 12px;
+  }
+  .daftar :global(.foto) { grid-row: span 2; width: 72px; height: 72px; border-radius: 10px; overflow: hidden; background: #efeeea; }
+  .daftar :global(.foto img) { width: 100%; height: 100%; object-fit: cover; }
+  .daftar :global(.nama) { font-weight: 600; text-decoration: none; }
+  .daftar :global(.detail) { color: var(--muted); font-size: 0.85rem; }
+  .daftar :global(.harga-satuan) { font-size: 0.9rem; }
+  .daftar :global(.peringatan) { margin-top: 4px; color: var(--habis); font-size: 0.85rem; font-weight: 600; }
+  .daftar :global(.status-hilang), .daftar :global(.status-habis) { opacity: 0.75; }
+  .daftar :global(.aksi-item) { grid-column: 2; display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; margin-top: 6px; }
+  .daftar :global(.subtotal-item) { font-weight: 700; margin-left: auto; }
+  .daftar :global(.hapus) { background: none; border: none; padding: 4px 0; color: var(--muted); text-decoration: underline; cursor: pointer; font: inherit; font-size: 0.85rem; }
+  .daftar :global(.jumlah) { display: inline-flex; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; background: #fff; }
+  .daftar :global(.jumlah button) { width: 34px; height: 34px; border: none; background: none; font-size: 1.1rem; cursor: pointer; }
+  .daftar :global(.jumlah button:disabled) { color: #bbb; cursor: not-allowed; }
+  .daftar :global(.jumlah input) { width: 44px; border: none; text-align: center; font: inherit; -moz-appearance: textfield; }
+
+  .ringkasan :global(dl) { margin: 0; display: grid; gap: 8px; }
+  .ringkasan :global(dl > div) { display: flex; justify-content: space-between; gap: 12px; }
+  .ringkasan :global(dt) { color: var(--muted); }
+  .ringkasan :global(dd) { margin: 0; font-weight: 600; text-align: right; }
+</style>

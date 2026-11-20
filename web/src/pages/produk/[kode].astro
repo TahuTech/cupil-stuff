@@ -114,6 +114,7 @@ const dataKlien = {
       </div>
 
       <div class="aksi">
+        <button type="button" class="btn-keranjang" id="btn-keranjang">Masukkan keranjang</button>
         <a class="btn-wa" id="btn-wa" target="_blank" rel="noopener">Pesan via WhatsApp</a>
         {p.linkMarketplace && (
           <a class="btn-mp" href={p.linkMarketplace} target="_blank" rel="noopener">Beli di marketplace</a>
@@ -128,6 +129,10 @@ const dataKlien = {
 </Base>
 
 <script>
+  import { tambahKeKeranjang, MAKS_JUMLAH } from "../../lib/keranjang";
+  import { senangKepala } from "../../lib/maskot-mesin";
+  import { tampilkanNotifikasi } from "../../lib/notifikasi";
+
   type Varian = { id: string; kode: string; nama: string; harga: number; stok: number; preorder: boolean; foto: string[] };
   type Data = {
     kode: string; nama: string; fotoProduk: string[]; varian: Varian[];
@@ -240,11 +245,34 @@ const dataKlien = {
     if (data.warna.length) baris.push(`Warna: ${data.warna[warnaIdx].nama}`);
     baris.push(`Jumlah: ${n}`, `Harga: ${rupiah(varian.harga * n)}`, "", location.href);
 
+    aturTombolKeranjang();
     const wa = $("btn-wa") as HTMLAnchorElement;
     wa.href = `https://wa.me/${data.nomorWA}?text=${encodeURIComponent(baris.join("\n"))}`;
     wa.classList.toggle("nonaktif", habis);
     wa.setAttribute("aria-disabled", String(habis));
   }
+
+  // ---------- masukkan keranjang ----------
+  const tombolKeranjang = $("btn-keranjang") as HTMLButtonElement;
+  function aturTombolKeranjang() {
+    const habis = varian.stok <= 0 && !varian.preorder;
+    tombolKeranjang.disabled = habis;
+    tombolKeranjang.textContent = habis ? "Stok habis" : "Masukkan keranjang";
+  }
+  tombolKeranjang.addEventListener("click", () => {
+    const n = Number(jumlah.value) || 1;
+    const batas = varian.preorder ? MAKS_JUMLAH : varian.stok;
+    const berhasil = tambahKeKeranjang(
+      { varian: varian.id, jumlah: n, warna: data.warna.length ? data.warna[warnaIdx].nama : null },
+      batas,
+    );
+    if (berhasil) {
+      senangKepala();
+      tampilkanNotifikasi(`${data.nama} masuk keranjang.`, { teks: "Lihat keranjang", href: "/keranjang" });
+    } else {
+      tampilkanNotifikasi("Belum bisa disimpan. Keranjang penuh atau penyimpanan browser diblokir.");
+    }
+  });
 
   perbarui();
 </script>
@@ -289,12 +317,15 @@ const dataKlien = {
   .jumlah button { width: 40px; border: none; background: none; font-size: 1.2rem; cursor: pointer; }
   .jumlah input { width: 56px; border: none; text-align: center; font-size: 1rem; -moz-appearance: textfield; }
   .aksi { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 24px; }
-  .aksi a {
+  .aksi a, .aksi button {
     flex: 1 1 200px; text-align: center; padding: 14px; border-radius: 12px;
-    font-weight: 600; text-decoration: none;
+    font: inherit; font-weight: 600; text-decoration: none; cursor: pointer;
   }
-  .btn-wa { background: var(--wa); color: #fff; }
-  .btn-wa.nonaktif { background: #ccc; pointer-events: none; }
+  /* utama: masukkan keranjang; WhatsApp jadi pilihan kedua */
+  .btn-keranjang { flex-basis: 100% !important; background: var(--text); color: #fff; border: 1px solid var(--text); }
+  .btn-keranjang:disabled { background: #ccc; border-color: #ccc; cursor: not-allowed; }
+  .btn-wa { background: #fff; color: #128c4a; border: 1px solid var(--wa); }
+  .btn-wa.nonaktif { color: #999; border-color: #ccc; pointer-events: none; }
   .btn-mp { background: #fff; border: 1px solid var(--line); }
   .deskripsi { margin-top: 28px; padding-top: 20px; border-top: 1px solid var(--line); }
 

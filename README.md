@@ -32,10 +32,10 @@ cupil-stuff/
 │   └── pb_hooks/             build ulang otomatis, kode varian otomatis, route checkout/pesanan/servis/tiket
 └── web/                      katalog Astro (di-deploy ke Cloudflare Pages)
     └── src/
-        ├── config.ts         nama toko, nomor WhatsApp, alamat kirim servis, berat perangkat
+        ├── config.ts         nama toko, nomor WhatsApp, alamat kirim dan info antar servis
         ├── lib/pb.ts         ambil data dari PocketBase saat build
         ├── lib/ongkir.ts     rumus ongkir (dipakai di tahap 3) + ongkir.test.ts
-        ├── lib/servis.ts     helper form servis (kecilkan foto, alamat route) + servis-hook.test.ts
+        ├── lib/servis.ts     form servis (validasi = server, kecilkan foto) + servis.test.ts, servis-hook.test.ts
         └── pages/            landing (/), katalog, produk, keranjang, bayar, servis, cek-tiket, 404
 ```
 
@@ -166,20 +166,21 @@ Route `GET /api/pesanan/{nomor}?wa=XXXX` mengembalikan data terbatas:
 
 Alur customer:
 
-1. Buka `/servis`: lihat daftar jasa, portofolio sebelum/sesudah, dan aturan (tanpa DP, cek gratis, bayar setelah selesai, tolak estimasi hanya bayar ongkir kirim balik, boleh antar langsung).
-2. Isi form: jenis servis, perangkat, keluhan, foto (opsional, maks 5, dikecilkan di browser), nama, WhatsApp, cara kirim (kurir/antar), provinsi tujuan kirim balik.
-3. `POST /api/servis` membuat tiket `SRV-YYMMDD-XXXX` (status `menunggu_perangkat`). Halaman menampilkan nomor tiket + alamat kirim (atau info antar) + tombol WhatsApp.
-4. Customer memantau status di `/cek-tiket` (nomor tiket + 4 digit terakhir WA).
+1. Buka `/servis`: daftar jasa, portofolio sebelum/sesudah, dan aturan (tanpa DP, cek gratis, bayar penuh setelah selesai, tolak estimasi hanya bayar ongkir kirim balik, boleh antar dan ambil langsung).
+2. Isi form: jenis servis, jenis + merek perangkat, keluhan, foto (opsional, maks 5, dikecilkan di browser), nama, WhatsApp, cara kirim (kurir/antar), provinsi kirim balik (wajib jika kurir).
+3. `POST /api/servis` membuat tiket `SRV-YYMMDD-XXXX` (status `menunggu_perangkat`). Halaman menampilkan nomor tiket, alamat kirim (atau info antar), tombol WhatsApp, dan ajakan menyimpan nomor tiket.
+4. Customer memantau status di `/cek-tiket` (nomor tiket + 4 digit terakhir WA): urutan langkah, estimasi, tagihan, dan QRIS bernominal.
 
-Alur pemilik (di panel admin `api.<domain>/_/`, koleksi **tiket_servis**):
+Cara memproses tiket (panel admin `api.<domain>/_/`, koleksi **tiket_servis**). Setiap kali tiket disimpan, `ongkir_kirim_balik`, `total_tagihan`, dan link WhatsApp dihitung ulang otomatis. Buka link `link_wa_*` untuk mengirim kabar ke customer (pesan sudah terisi):
 
-1. **Diterima** — ubah status `diterima` saat perangkat datang.
-2. **Dicek** — `dicek` sambil memeriksa.
-3. **Estimasi** — isi `estimasi_biaya`, ubah status `menunggu_persetujuan`. Customer melihat estimasi + tombol setuju/tolak di `/cek-tiket`.
-4. **Dikerjakan / Selesai** — setelah disetujui, `dikerjakan`; setelah beres isi `biaya_final`, ubah `selesai` (customer melihat QRIS bernominal di `/cek-tiket`).
-5. **Kirim balik** — ubah `dikirim` setelah mengirim. Jika ditolak: isi `ongkir_kirim_balik`, ubah `dikembalikan`.
+1. **Perangkat datang**: ubah status ke `diterima`, lalu buka `link_wa_diterima`.
+2. **Dicek**: ubah ke `dicek` selama pemeriksaan (gratis).
+3. **Estimasi**: isi `estimasi_biaya`, ubah ke `menunggu_persetujuan`, lalu buka `link_wa_estimasi`. Customer bisa setuju/tolak dari `/cek-tiket`.
+4. **Disetujui**: ubah ke `dikerjakan`. Setelah beres, isi `biaya_final` dan ubah ke `selesai`, lalu buka `link_wa_selesai` (berisi total = biaya + ongkir kirim balik). Customer membayar lewat QRIS di `/cek-tiket`.
+5. **Ditolak**: ubah ke `dikembalikan`, lalu buka `link_wa_selesai`. Tagihannya hanya ongkir kirim balik; jika antar langsung, tidak ada tagihan.
+6. **Kirim balik**: isi `resi`, ubah ke `dikirim`, lalu buka `link_wa_resi`.
 
-Berat bawaan perangkat untuk ongkir kirim balik dan alamat kirim diatur di `web/src/config.ts` (`SERVIS.beratPerangkat`, `SERVIS.alamatKirim`).
+Ongkir kirim balik dihitung dari zona provinsi customer dan berat bawaan perangkat (`BERAT_PERANGKAT` di `pocketbase/pb_hooks/servis.js`). Jika provinsi tidak punya zona, nilainya 0: isi `ongkir_kirim_balik` secara manual (nilai manual tidak ditimpa, kecuali cara kirim/provinsi/jenis perangkat diubah). Alamat kirim dan info antar ada di `web/src/config.ts` (`SERVIS`). Di `.env` homelab, isi `SITE_URL` agar tautan `/cek-tiket` di pesan WhatsApp mengarah ke domain katalog.
 
 ## Status
 
@@ -187,8 +188,8 @@ Berat bawaan perangkat untuk ongkir kirim balik dan alamat kirim diatur di `web/
 - [x] Tahap 2: landing page, katalog (cari, filter lini/kategori), halaman produk (galeri, 3D + warna, varian, stok, jumlah, pesan via WhatsApp, link marketplace)
 - [x] Tahap 3: keranjang, ongkir per zona, checkout (`POST /api/checkout`, hitung ulang di server), QRIS nominal otomatis, pesanan tersimpan
 - [x] Tahap 4: konfirmasi bayar, stok otomatis, ongkir manual, link WA, halaman /bayar
-- [x] Tahap 5: halaman jasa servis, form + nomor tiket (`POST /api/servis`), cek status (`GET /api/tiket`), QRIS saat selesai
+- [x] Tahap 5: halaman jasa servis, form + nomor tiket (`POST /api/servis`), cek status (`GET /api/tiket`), tagihan + ongkir kirim balik dihitung di server, QRIS, link WA pemilik
 
 ## Catatan
 
-Sudah dicek: migrasi berjalan di PocketBase 0.40.3 (6 zona ongkir terisi), `npm test` lulus (104 test), dan `npm run build` berhasil (10 halaman). Route `/api/pesanan` dan `/api/tiket` diuji langsung: 4 digit benar mengembalikan data, 4 digit salah ditolak, 5 kali salah lalu diblokir 15 menit. Jika migrasi gagal, cek `docker compose logs pocketbase`.
+Sudah dicek: migrasi berjalan di PocketBase 0.40.3 (6 zona ongkir terisi), `npm run check` 0 error, `npm test` lulus (158 test), dan `npm run build` berhasil (10 halaman). Route `/api/servis` dan `/api/tiket` diuji langsung dengan curl (validasi, foto, ongkir kirim balik, tagihan, respons tanpa data pribadi, pembatasan 5 kali salah per IP selama 15 menit), dan alur `/servis` → `/cek-tiket` diuji di browser pada 360, 393, dan 1280 px. Jika migrasi gagal, cek `docker compose logs pocketbase`.

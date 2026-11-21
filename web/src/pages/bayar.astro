@@ -12,7 +12,7 @@ import Maskot from "../components/Maskot.astro";
       <label><span>Nomor pesanan</span>
         <input type="text" id="nomor" placeholder="CS-260101-ABCD" required maxlength={20} /></label>
       <label><span>4 digit terakhir WA</span>
-        <input type="text" id="wa4" inputmode="numeric" pattern="\d{4}" maxlength={4}
+        <input type="text" id="wa4" inputmode="numeric" pattern="[0-9]{4}" maxlength={4}
                placeholder="1234" required autocomplete="off" /></label>
       <button type="submit" class="tombol utama" id="btn-cek">Cek pesanan</button>
       <p class="galat" id="galat-masuk" hidden></p>

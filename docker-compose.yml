@@ -12,8 +12,15 @@ services:
       # URL deploy hook Cloudflare Pages (Settings → Builds → Deploy hooks).
       # Kosongkan jika belum ada; build ulang otomatis akan dilewati.
       PAGES_DEPLOY_HOOK: ${PAGES_DEPLOY_HOOK:-}
-      # Alamat katalog, dipakai di link WhatsApp tiket servis (…/cek-tiket?nomor=…)
-      SITE_URL: ${SITE_URL:-https://cupilstuff.id}
+      # Alamat katalog (https://<domain>), untuk tautan /bayar dan /cek-tiket di pesan WhatsApp
+      SITE_URL: ${SITE_URL:-}
+      # Alamat PocketBase publik (https://api.<domain>), untuk link ke panel admin di notifikasi
+      API_URL: ${API_URL:-}
+      # Notifikasi Telegram ke pemilik toko (lihat README). Kosong = notifikasi dilewati.
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
+      TELEGRAM_CHAT_ID: ${TELEGRAM_CHAT_ID:-}
+      # Hanya untuk pengujian lokal; biarkan kosong.
+      TELEGRAM_API_URL: ${TELEGRAM_API_URL:-}
     # CORS: origin yang boleh memanggil API dari browser (route /api/checkout).
     # Produksi: isi PB_ORIGINS di .env dengan alamat katalog, misalnya https://cupilstuff.id
     # Default untuk development: astro dev / preview di localhost.

@@ -166,6 +166,17 @@ Route `GET /api/pesanan/{nomor}?wa=XXXX` mengembalikan data terbatas:
 
 **Teks QRIS toko** (`PUBLIC_QRIS_STATIS`): scan stiker QRIS dengan aplikasi pembaca QR, salin teksnya (diawali `000201`), lalu isi di `web/.env` dan di environment variables Cloudflare Pages. Jangan commit nilainya. Uji dengan scan dari aplikasi bank/e-wallet sampai layar konfirmasi saja (jangan dibayar), pastikan nama toko dan nominalnya benar.
 
+## Notifikasi Telegram untuk pemilik toko
+
+Setiap pesanan baru, pesanan yang ongkirnya perlu dikonfirmasi (di atas 5 kg atau provinsi tanpa zona), dan tiket servis baru dikirim ke Telegram: nomor, total atau jasa, dan link langsung ke record di panel admin. Gratis, tanpa layanan berbayar.
+
+1. Di Telegram, buka **@BotFather**, kirim `/newbot`, ikuti petunjuknya. Simpan **token** yang diberikan (bentuknya `123456789:AA...`).
+2. Buka bot barumu dan kirim pesan apa saja (misalnya `halo`), supaya bot boleh mengirim pesan kepadamu.
+3. Buka `https://api.telegram.org/bot<TOKEN>/getUpdates` di browser. Cari `"chat":{"id":...}`; angka itu adalah **chat id**.
+4. Isi di `.env` homelab: `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`, dan `API_URL=https://api.<domain>` (untuk link ke panel admin). Lalu `docker compose up -d` lagi.
+
+Jika token atau chat id kosong, notifikasi dilewati tanpa galat. Jika Telegram sedang gangguan, pesanan dan tiket tetap tersimpan (pembeli menunggu paling lama sekitar 5 detik) dan kegagalannya tercatat di **Logs** panel admin. Jangan simpan token di repo.
+
 ## Jasa servis
 
 Alur customer:

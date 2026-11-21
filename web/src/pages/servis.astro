@@ -284,7 +284,7 @@ const aturan = [
     try {
       // Mode WhatsApp: server mati → kirim isian lewat WA, foto tetap di form (tidak hilang).
       if (serverMati) {
-        const pesan = pesanServisWA(data, fotoTerpilih().length, TOKO.nama);
+        const pesan = pesanServisWA(data, fotoTerpilih().length, TOKO.nama, (document.getElementById("jasa") as HTMLSelectElement).selectedOptions[0]?.textContent?.trim() ?? "");
         const jendela = window.open(linkWA(pesan), "_blank");
         if (jendela) jendela.opener = null; // "noopener" di fitur window.open selalu mengembalikan null
         if (!jendela) tampilkanGalat({ umum: "Izinkan jendela baru untuk membuka WhatsApp, lalu tekan tombol lagi." });

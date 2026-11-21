@@ -65,13 +65,13 @@ export function pesanKeranjangWA(baris: BarisKeranjang[], pembeli: PembeliWA, on
 }
 
 /** Pesan WA untuk permintaan servis saat server mati (tanpa nomor tiket). */
-export function pesanServisWA(isian: IsianServis, jumlahFoto: number, toko: string): string {
+export function pesanServisWA(isian: IsianServis, jumlahFoto: number, toko: string, namaJasa = ""): string {
   const kirim = LABEL_CARA_KIRIM[isian.cara_kirim] || isian.cara_kirim;
   const jenis = LABEL_PERANGKAT[isian.perangkat_jenis] || isian.perangkat_jenis;
   return [
     `Halo ${toko}, saya mau ajukan servis (lewat WhatsApp karena pemesanan otomatis sedang istirahat).`,
     "",
-    `• Jenis servis: ${isian.jasa ? "sudah dipilih di form" : "belum tahu / ingin tanya dulu"}`,
+    `• Jenis servis: ${isian.jasa ? namaJasa || "sudah dipilih di form" : "belum tahu / ingin tanya dulu"}`,
     `• Perangkat: ${jenis} — ${isian.perangkat}`,
     `• Keluhan: ${isian.keluhan}`,
     `• Nama: ${isian.nama}`,

@@ -101,6 +101,8 @@ describe("pesanServisWA", () => {
 
   it("jasa belum dipilih: disebut belum tahu / tanya dulu", () => {
     expect(pesanServisWA(isian, 0, "Cupil Stuff")).toContain("Jenis servis: belum tahu / ingin tanya dulu");
+    // jasa dipilih: nama jasa ditulis, bukan sekadar "sudah dipilih"
+    expect(pesanServisWA({ ...isian, jasa: "abcde12345fghij" }, 0, "Cupil Stuff", "Ganti switch mouse")).toContain("Jenis servis: Ganti switch mouse");
   });
 });
 

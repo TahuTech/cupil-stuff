@@ -1,8 +1,8 @@
 /// <reference path="../pb_data/types.d.ts" />
 
 // GET /api/tiket/{nomor}?wa=XXXX
-// Pembeli memasukkan nomor tiket + 4 digit terakhir WA → hanya status, jasa,
-// estimasi biaya, dan tanggal (tanpa data pribadi lain).
+// Pembeli memasukkan nomor tiket + 4 digit terakhir WA → hanya status, nama jasa, perangkat,
+// biaya, ongkir kirim balik, tagihan, dan tanggal. Tanpa nama, WA, keluhan, foto, atau provinsi.
 
 routerAdd("GET", "/api/tiket/{nomor}", (e) => {
   const W = require(`${__hooks}/cekwa.js`);
@@ -30,28 +30,24 @@ routerAdd("GET", "/api/tiket/{nomor}", (e) => {
   if (tolak) return e.json(tolak.status, tolak.body);
 
   // nama jasa (jika ada)
-  let jasa = null;
+  let namaJasa = null;
   const jasaId = tk.getString("jasa");
   if (jasaId) {
     try {
-      const rj = e.app.findRecordById("jasa", jasaId);
-      jasa = { kode: rj.getString("kode"), nama: rj.getString("nama") };
+      namaJasa = e.app.findRecordById("jasa", jasaId).getString("nama");
     } catch (_) {}
   }
 
-  const status = tk.getString("status") || "menunggu_perangkat";
-
-  return e.json(200, {
+  // hanya field yang diizinkan (lihat responsPublik di servis.js)
+  return e.json(200, S.responsPublik({
     nomor: tk.getString("nomor"),
-    status: status,
-    status_label: S.LABEL_STATUS[status] || status,
-    jasa: jasa,
+    status: tk.getString("status"),
     perangkat: tk.getString("perangkat"),
     cara_kirim: tk.getString("cara_kirim"),
-    estimasi_biaya: tk.getInt("estimasi_biaya") || null,
-    biaya_final: tk.getInt("biaya_final") || null,
-    ongkir_kirim_balik: tk.getInt("ongkir_kirim_balik") || null,
-    dibuat: tk.getString("created"),
-    diperbarui: tk.getString("updated"),
-  });
+    estimasi_biaya: tk.getInt("estimasi_biaya"),
+    biaya_final: tk.getInt("biaya_final"),
+    ongkir_kirim_balik: tk.getInt("ongkir_kirim_balik"),
+    created: tk.getString("created"),
+    updated: tk.getString("updated"),
+  }, namaJasa));
 });

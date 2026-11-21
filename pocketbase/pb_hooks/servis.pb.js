@@ -1,8 +1,8 @@
 /// <reference path="../pb_data/types.d.ts" />
 
 // POST /api/servis: membuat tiket servis.
-// Body: multipart/form-data — nama, wa, perangkat, keluhan, cara_kirim, provinsi, jasa (opsional),
-//       foto[] (maks 5). Validasi di server; nomor tiket SRV-YYMMDD-XXXX, status menunggu_perangkat.
+// Body: multipart/form-data — nama, wa, perangkat_jenis, perangkat, keluhan, cara_kirim,
+//       provinsi (wajib jika kurir), jasa (opsional), foto[] (maks 5, masing-masing maks 5 MB). Validasi di server; nomor tiket SRV-YYMMDD-XXXX, status menunggu_perangkat.
 // createRule tiket_servis = null, jadi hanya route ini yang bisa membuat tiket.
 routerAdd(
   "POST",
@@ -16,8 +16,15 @@ routerAdd(
     const v = S.validasiInput(body);
     if (!v.ok) return e.json(400, { pesan: "Periksa lagi isian kamu.", galat: v.galat });
 
-    // provinsi (opsional di validasi dasar, tapi dipakai untuk ongkir kirim balik)
-    const provinsi = typeof body.provinsi === "string" ? body.provinsi.replace(/\s+/g, " ").trim() : "";
+    // foto: jumlah dan ukuran diperiksa sebelum menyimpan apa pun
+    let daftarFoto = [];
+    try {
+      daftarFoto = e.findUploadedFiles("foto") || [];
+    } catch (_) {
+      daftarFoto = [];
+    }
+    const galatFoto = S.validasiFoto(daftarFoto.map((f) => ({ size: f.size })));
+    if (galatFoto) return e.json(400, { pesan: "Periksa lagi isian kamu.", galat: { foto: galatFoto } });
 
     // cek jasa (jika dipilih) memang aktif
     let jasaId = v.data.jasa;
@@ -50,30 +57,23 @@ routerAdd(
     r.set("perangkat", v.data.perangkat);
     r.set("keluhan", v.data.keluhan);
     r.set("cara_kirim", v.data.cara_kirim);
-    r.set("provinsi", provinsi);
+    r.set("perangkat_jenis", v.data.perangkat_jenis);
+    r.set("provinsi", v.data.provinsi);
     if (jasaId) r.set("jasa", jasaId);
     r.set("status", "menunggu_perangkat");
 
-    // foto: multipart files, maks 5, sudah dikecilkan di browser
-    let daftarFoto = [];
-    try {
-      daftarFoto = e.findUploadedFiles("foto") || [];
-    } catch (_) {
-      daftarFoto = [];
-    }
-    let n = 0;
-    for (const f of daftarFoto) {
-      if (!f || n >= 5) continue;
-      try {
-        r.set("foto", f); // file field maxSelect 5, PocketBase menumpuk
-        n++;
-      } catch (_) {}
-    }
+    // semua foto sekaligus (set berulang hanya menyimpan foto terakhir)
+    if (daftarFoto.length) r.set("foto", daftarFoto);
 
     try {
       e.app.save(r);
     } catch (err) {
-      return e.json(400, { pesan: "Tiket tidak bisa dibuat. Periksa foto atau coba lagi.", rinci: String(err) });
+      // validasi field foto PocketBase memeriksa isi berkas (bukan nama): tolak yang bukan gambar
+      if (String(err).indexOf("foto") >= 0) {
+        return e.json(400, { pesan: "Periksa lagi isian kamu.", galat: { foto: "Foto harus berupa gambar JPG, PNG, atau WebP." } });
+      }
+      e.app.logger().error("Gagal menyimpan tiket servis", "error", String(err));
+      return e.json(500, { pesan: "Tiket belum bisa dibuat. Coba lagi sebentar." });
     }
 
     return e.json(200, { nomor, status: "menunggu_perangkat" });

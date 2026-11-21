@@ -310,7 +310,8 @@ const labelProvinsi = (p: string) => (p === "Jawa Timur" ? "Jawa Timur (selain K
         ongkirTerakhir = ringkasBayar(siapCheckout.subtotal, siapCheckout.beratGram, zona);
       }
       const pesan = pesanKeranjangWA(siapCheckout.baris, isian, ongkirTerakhir!, TOKO.nama);
-      const jendela = window.open(linkWA(pesan), "_blank", "noopener");
+      const jendela = window.open(linkWA(pesan), "_blank");
+      if (jendela) jendela.opener = null; // "noopener" di fitur window.open selalu mengembalikan null, jadi tidak dipakai
       // Baru kosongkan keranjang setelah WA benar-benar dibuka (blokir popup → jangan kosongkan)
       if (jendela) kosongkanKeranjang();
       else galatUmum("Izinkan jendela baru untuk membuka WhatsApp, atau tekan tombol lagi.");

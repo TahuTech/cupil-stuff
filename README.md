@@ -131,19 +131,23 @@ Di atas 5 kg atau provinsi tanpa zona: pesanan tetap tersimpan dengan `ongkir_ko
 
 **Akses panel admin:** buka `api.<domain>/_/` (login lewat Cloudflare Access dulu). Tidak ada panel admin terpisah — semua proses dilakukan langsung dari dashboard PocketBase bawaan di koleksi **pesanan**. Setelah login, buka `api.<domain>/_/#/collections/pesanan`, klik record pesanan yang ingin diproses, ubah field yang diperlukan, lalu simpan. Link WhatsApp (`link_wa_*`) bisa langsung diklik dari panel untuk mengirim pesan ke pembeli.
 
+Link WhatsApp di pesanan dihitung ulang otomatis setiap kali pesanan disimpan, jadi selalu sesuai total, status, dan resi terbaru.
+
 ### Pesanan biasa (≤ 5 kg)
 
-1. **Cek mutasi** — Pastikan uang masuk ke rekening sesuai nominal `total` di pesanan.
-2. **Ubah status bayar → lunas** — Di panel admin, ubah `status_bayar` ke `lunas` lalu simpan. Stok otomatis berkurang.
-3. **Kemas barang** — Siapkan paket sesuai rincian `items`.
-4. **Isi resi** — Isi nomor resi J&T, lalu ubah `status_kirim` ke `dikirim`. Pembeli bisa mengecek resi di halaman `/bayar`.
-5. **Kirim info resi** — Klik `link_wa_resi` di panel admin untuk mengirim pesan WhatsApp ke pembeli (nomor resi + tautan lacak).
+1. **Cek mutasi**: pastikan uang masuk sesuai `total` pesanan. Jika pembeli belum membayar, `link_wa_ongkir` bisa dipakai untuk mengingatkan total + tautan `/bayar`.
+2. **Ubah status bayar → lunas**, lalu simpan. Stok semua barang berkurang otomatis. Jika stok salah satu barang tidak cukup, perubahan ditolak dan **tidak ada** stok yang berubah (cek dan perbaiki stok dulu).
+3. **Kabari pembeli**: klik `link_wa_lunas` (konfirmasi pembayaran diterima).
+4. **Kemas barang** sesuai rincian `items`.
+5. **Isi resi** J&T, ubah `status_kirim` ke `dikirim`, lalu klik `link_wa_resi` (nomor resi + halaman lacak J&T). Pembeli juga bisa melihat resi di `/bayar`.
+
+**Batal**: ubah `status_bayar` ke `batal`. Jika sebelumnya sudah lunas, stok dikembalikan otomatis.
 
 ### Pesanan di atas 5 kg (ongkir perlu konfirmasi)
 
-1. Cek berat dan alamat di pesanan.
-2. **Isi ongkir** — Tentukan ongkir manual, isi field `ongkir` di panel admin. `potongan_ongkir` dan `total` dihitung ulang otomatis, `ongkir_konfirmasi` jadi `false`.
-3. **Kirim info total** — Klik `link_wa_ongkir` untuk mengirim total akhir + link halaman `/bayar` ke pembeli.
+1. Cek berat dan alamat di pesanan (`ongkir_konfirmasi` = true, `link_wa_ongkir` masih kosong).
+2. **Isi ongkir** manual di field `ongkir`, lalu simpan. `potongan_ongkir` dan `total` dihitung ulang otomatis, dan `ongkir_konfirmasi` menjadi false.
+3. **Kirim info total**: klik `link_wa_ongkir` (total akhir + tautan `/bayar`, tempat pembeli melihat QRIS bernominal).
 4. Setelah pembeli membayar, lanjutkan seperti pesanan biasa dari langkah 2.
 
 ### Mengecek pembayaran (pembeli)
@@ -158,7 +162,7 @@ Pembeli bisa mengecek status dan membayar lewat halaman `/bayar?nomor=CS-YYMMDD-
 Route `GET /api/pesanan/{nomor}?wa=XXXX` mengembalikan data terbatas:
 - status bayar, rincian barang, ongkir, potongan, total
 - **Tanpa** alamat, nama pembeli, dan nomor WA lengkap
-- Percobaan 4 digit WA salah: maksimal 5 kali dari IP yang sama, lalu diblokir 15 menit
+- Percobaan gagal (4 digit WA salah atau nomor pesanan tidak ada): maksimal 5 kali per 15 menit dari IP yang sama (IP dari header Cloudflare), lalu diblokir sampai 15 menit itu habis
 
 **Teks QRIS toko** (`PUBLIC_QRIS_STATIS`): scan stiker QRIS dengan aplikasi pembaca QR, salin teksnya (diawali `000201`), lalu isi di `web/.env` dan di environment variables Cloudflare Pages. Jangan commit nilainya. Uji dengan scan dari aplikasi bank/e-wallet sampai layar konfirmasi saja (jangan dibayar), pastikan nama toko dan nominalnya benar.
 

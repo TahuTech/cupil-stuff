@@ -217,6 +217,10 @@ lalu siapkan file yang dibutuhkan:
 - Tunnel: api.<domain> → http://pocketbase:8090; Cloudflare Access untuk /_/
 - Cloudflare Pages: root web, build npm run build, output dist, env PUBLIC_*; deploy hook ke .env homelab
 - PocketBase: atur Application URL, batasi CORS API ke <domain>
+- database produksi dimulai KOSONG: jangan salin pocketbase/pb_data dari komputer development;
+  migrasi membuat koleksi + 6 zona ongkir, lalu pemilik mengisi kategori, produk, jasa lewat panel admin
+  (seed-dev.mjs dan bersihkan-data-uji.mjs hanya untuk lokal)
+- env homelab: SITE_URL, API_URL, PB_ORIGINS, TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID; ganti semua TODO(go-live) di web/src/config.ts
 - skrip scripts/cek-produksi.sh: cek katalog, cdn, dan api merespons; api /_/ meminta login Access
 - uji: matikan container pocketbase dan pastikan katalog, foto, dan 3D tetap terbuka
 ```

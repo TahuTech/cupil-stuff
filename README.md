@@ -199,6 +199,18 @@ Cara memproses tiket (panel admin `api.<domain>/_/`, koleksi **tiket_servis**). 
 
 Ongkir kirim balik dihitung dari zona provinsi customer dan berat bawaan perangkat (`BERAT_PERANGKAT` di `pocketbase/pb_hooks/servis.js`). Jika provinsi tidak punya zona, nilainya 0: isi `ongkir_kirim_balik` secara manual (nilai manual tidak ditimpa, kecuali cara kirim/provinsi/jenis perangkat diubah). Alamat kirim dan info antar ada di `web/src/config.ts` (`SERVIS`). Di `.env` homelab, isi `SITE_URL` agar tautan `/cek-tiket` di pesan WhatsApp mengarah ke domain katalog.
 
+## Data uji dan database produksi
+
+**Database produksi dimulai kosong.** Jangan menyalin folder `pocketbase/pb_data` dari komputer development ke homelab. Saat PocketBase produksi pertama kali jalan, migrasi membuat semua koleksi dan 6 zona ongkir; kategori, produk, varian, jasa, dan portofolio diisi pemilik lewat panel admin. `scripts/seed-dev.mjs` dan `scripts/bersihkan-data-uji.mjs` hanya untuk lokal.
+
+Membersihkan pesanan dan tiket servis uji di lokal (katalog dan zona ongkir tidak disentuh; stok tidak dikembalikan):
+
+```bash
+PB_EMAIL=dev@cupilstuff.local PB_PASSWORD=PASSWORD node scripts/bersihkan-data-uji.mjs
+```
+
+Skrip menampilkan jumlah dan contoh nomor yang akan dihapus, lalu meminta kamu mengetik `HAPUS`. Skrip menolak berjalan jika `PB_URL` bukan localhost/127.0.0.1.
+
 ## Status
 
 - [x] Tahap 1: PocketBase, skema, zona ongkir, hook build ulang

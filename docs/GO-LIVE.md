@@ -119,7 +119,7 @@ Tujuan: `https://api.cupilstuff.web.id/_/` hanya bisa dibuka email pemilik. **`/
   PUBLIC_SITE_URL=https://cupilstuff.web.id
   PUBLIC_QRIS_STATIS=<teks QRIS statis toko; isi sendiri, jangan di-commit>
   ```
-  Build **gagal dengan pesan jelas** bila `PUBLIC_PB_URL` atau `PUBLIC_SITE_URL` kosong (lihat `web/scripts/cek-env-build.mjs`).
+  Build **gagal dengan pesan jelas** bila salah satu dari keempat variabel ini kosong atau bukan `https://` (lihat `web/scripts/cek-env-build.mjs`). Nilainya tidak pernah dicetak.
 - [ ] **Custom domains**: tambah `cupilstuff.web.id` (domain utama).
 - [ ] Tambahkan juga `www.cupilstuff.web.id`, lalu buat **Redirect Rule** (Rules → Redirect Rules):
   dari `www.cupilstuff.web.id/*` ke `https://cupilstuff.web.id/$1` (301, permanen).

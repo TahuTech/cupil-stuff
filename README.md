@@ -16,7 +16,7 @@ BUILD_DEV=1 npm run build                # build lokal (lewati cek env produksi)
 
 PocketBase harus jalan saat `npm run dev`/`npm run build`, karena data katalog diambil saat build.
 
-`npm run build` menjalankan `prebuild` yang **menggagalkan build** bila `PUBLIC_PB_URL`/`PUBLIC_SITE_URL` kosong atau bukan `https://` — supaya salah konfigurasi di Cloudflare Pages cepat ketahuan. Untuk build lokal pakai `BUILD_DEV=1`.
+`npm run build` menjalankan `prebuild` yang **menggagalkan build** bila `PUBLIC_PB_URL`, `PUBLIC_SITE_URL`, `PUBLIC_CDN_URL`, atau `PUBLIC_QRIS_STATIS` kosong (tiga yang pertama juga harus `https://`) — supaya salah konfigurasi di Cloudflare Pages cepat ketahuan. Untuk build lokal pakai `BUILD_DEV=1`.
 
 ## Go-live (produksi)
 

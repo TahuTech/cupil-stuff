@@ -114,7 +114,7 @@ Stok EDC dipakai bersama dengan marketplace dan diperbarui manual oleh pemilik. 
 - Isi `PUBLIC_QRIS_STATIS` jangan pernah ditampilkan atau dicatat di log, laporan, maupun commit.
 - Tidak ada domain situs tertulis di kode. Hook memakai env `SITE_URL` (tautan `/bayar`, `/cek-tiket`) dan `API_URL` (link panel admin) lewat `pb_hooks/bersama.js`; web memakai `PUBLIC_SITE_URL` / `PUBLIC_PB_URL`.
 - Pengaturan PocketBase produksi (Application URL, trusted proxy, S3, backup, SMTP) diatur lewat `scripts/siapkan-pocketbase.mjs` (idempoten, membaca env), bukan klik manual. Lihat `docs/GO-LIVE.md`.
-- Build produksi gagal dengan pesan jelas bila `PUBLIC_PB_URL`/`PUBLIC_SITE_URL` kosong (`web/scripts/cek-env-build.mjs`, dipanggil `prebuild`). Untuk build lokal pakai `BUILD_DEV=1 npm run build`.
+- Build produksi gagal dengan pesan jelas bila `PUBLIC_PB_URL`, `PUBLIC_SITE_URL`, `PUBLIC_CDN_URL`, atau `PUBLIC_QRIS_STATIS` kosong (`web/scripts/cek-env-build.mjs`, dipanggil `prebuild`). Untuk build lokal pakai `BUILD_DEV=1 npm run build`.
 - IP klien selalu dari header `CF-Connecting-IP` (trusted proxy); `X-Forwarded-For` dari pengunjung tidak dipercaya. Rate limit (`cekwa.js`) memakai IP ini.
 - Route API dari browser selalu lewat `urlApi()` di `web/src/lib/api.ts` (relatif saat dev supaya lewat proxy Vite).
 - Link lacak J&T hanya dari `linkLacakJNT()` (`pb_hooks/bersama.js` dan `web/src/lib/lacak.ts`, dijaga sama oleh test).

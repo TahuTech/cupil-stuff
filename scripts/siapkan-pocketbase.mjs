@@ -6,7 +6,29 @@
 //
 // Env wajib: PB_EMAIL, PB_PASSWORD (superuser). Wajib di produksi: SITE_URL, API_URL.
 // Env opsional: PB_URL, R2_*, SMTP_*, R2_BACKUP_BUCKET.
+// Berkas .env di akar repo dibaca otomatis (env yang sudah ada di shell menang).
 // Tidak pernah mencetak nilai rahasia (password, token, kunci) ke layar.
+//
+// Semua perubahan memakai PATCH sebagian (hanya bagian yang diatur). PocketBase tidak
+// mengembalikan rahasia (password SMTP, secret S3) saat GET /api/settings, jadi mengirim balik
+// seluruh objek hasil GET akan menimpa rahasia yang sudah tersimpan dengan kosong.
+
+import { readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
+
+function muatDotEnv() {
+  try {
+    const akar = join(dirname(fileURLToPath(import.meta.url)), "..");
+    for (const baris of readFileSync(join(akar, ".env"), "utf8").split("\n")) {
+      const m = baris.match(/^\s*([A-Z0-9_]+)\s*=\s*(.*?)\s*$/);
+      if (m && process.env[m[1]] === undefined) process.env[m[1]] = m[2].replace(/^["']|["']$/g, "");
+    }
+  } catch {
+    // tidak ada .env: pakai env shell saja
+  }
+}
+muatDotEnv();
 
 const PB_URL = (process.env.PB_URL || "http://127.0.0.1:8090").replace(/\/$/, "");
 const E = process.env;
@@ -37,28 +59,27 @@ async function api(method, path, body) {
   return data;
 }
 
-const ambil = () => api("GET", "/api/settings");
-const simpan = (s) => api("PATCH", "/api/settings", s);
+const simpan = (bagian) => api("PATCH", "/api/settings", bagian);
 
-/** Nama aplikasi + Application URL. */
+/** Nama aplikasi + Application URL (+ alamat pengirim email bila SMTP_USER diisi). */
 async function aturAplikasi() {
-  const s = await ambil();
   const appUrl = wajib("API_URL");
-  s.meta.appName = "Cupil Stuff";
-  s.meta.appURL = appUrl;
-  if ((E.SMTP_USER || "").trim()) s.meta.senderAddress = E.SMTP_USER.trim();
-  await simpan(s);
+  const meta = { appName: "Cupil Stuff", appURL: appUrl, senderName: "Cupil Stuff" };
+  if ((E.SMTP_USER || "").trim()) meta.senderAddress = E.SMTP_USER.trim();
+  await simpan({ meta });
   console.log(`✓ Application URL = ${appUrl}, nama aplikasi = Cupil Stuff`);
 }
 
 /** Trusted proxy: IP asli dibaca dari header CF-Connecting-IP (Cloudflare Tunnel). */
 async function aturTrustedProxy() {
-  const s = await ambil();
-  s.trustedProxy = s.trustedProxy || {};
-  s.trustedProxy.headers = ["CF-Connecting-IP"];
-  s.trustedProxy.useLeftmostIP = false;
-  await simpan(s);
+  await simpan({ trustedProxy: { headers: ["CF-Connecting-IP"], useLeftmostIP: false } });
   console.log("✓ Trusted proxy: IP asli dibaca dari header CF-Connecting-IP");
+}
+
+/** Peringatan email saat superuser login dari lokasi baru (butuh SMTP agar terkirim). */
+async function aturPeringatanLogin() {
+  await api("PATCH", "/api/collections/_superusers", { authAlert: { enabled: true } });
+  console.log("✓ Peringatan login superuser aktif");
 }
 
 /** CORS hanya origin katalog. PocketBase v0.23+ memakai flag --origins, jadi ini sekadar cek. */
@@ -83,16 +104,7 @@ async function aturS3() {
     console.log("ℹ R2_ENDPOINT/R2_BUCKET/R2_ACCESS_KEY_ID/R2_SECRET_ACCESS_KEY belum lengkap — S3 dilewati.");
     return;
   }
-  const s = await ambil();
-  s.s3 = s.s3 || {};
-  s.s3.enabled = true;
-  s.s3.bucket = bucket;
-  s.s3.region = "auto";
-  s.s3.endpoint = endpoint;
-  s.s3.accessKey = access;
-  s.s3.secret = secret;
-  s.s3.forcePathStyle = true;
-  await simpan(s);
+  await simpan({ s3: { enabled: true, bucket, region: "auto", endpoint, accessKey: access, secret, forcePathStyle: true } });
   console.log(`✓ S3/R2 aktif: bucket ${bucket}, region auto, force path style`);
 }
 
@@ -103,20 +115,23 @@ async function aturBackup() {
     console.log("ℹ R2 belum diisi — backup ke S3 dilewati.");
     return;
   }
-  const s = await ambil();
-  s.backups = s.backups || {};
-  s.backups.cron = "0 2 * * *";
-  s.backups.cronMaxKeep = 7;
-  s.backups.s3 = s.backups.s3 || {};
-  s.backups.s3.enabled = true;
-  s.backups.s3.bucket = (E.R2_BACKUP_BUCKET || E.R2_BUCKET || "").trim();
-  s.backups.s3.region = "auto";
-  s.backups.s3.endpoint = endpoint;
-  s.backups.s3.accessKey = (E.R2_ACCESS_KEY_ID || "").trim();
-  s.backups.s3.secret = (E.R2_SECRET_ACCESS_KEY || "").trim();
-  s.backups.s3.forcePathStyle = true;
-  await simpan(s);
-  console.log(`✓ Backup harian 02.00 ke ${s.backups.s3.bucket}, simpan 7 terakhir`);
+  const bucket = (E.R2_BACKUP_BUCKET || E.R2_BUCKET || "").trim();
+  await simpan({
+    backups: {
+      cron: "0 2 * * *",
+      cronMaxKeep: 7,
+      s3: {
+        enabled: true,
+        bucket,
+        region: "auto",
+        endpoint,
+        accessKey: (E.R2_ACCESS_KEY_ID || "").trim(),
+        secret: (E.R2_SECRET_ACCESS_KEY || "").trim(),
+        forcePathStyle: true,
+      },
+    },
+  });
+  console.log(`✓ Backup harian 02.00 ke ${bucket}, simpan 7 terakhir`);
 }
 
 /** SMTP dari env. Peringatan login superuser dari IP baru aktif dengan SMTP. */
@@ -126,17 +141,20 @@ async function aturSmtp() {
     console.log("ℹ SMTP_HOST kosong — SMTP dilewati (peringatan login tidak terkirim lewat email).");
     return;
   }
-  const s = await ambil();
-  s.smtp = s.smtp || {};
-  s.smtp.enabled = true;
-  s.smtp.host = host;
-  s.smtp.port = Number(E.SMTP_PORT || 587);
-  s.smtp.username = (E.SMTP_USER || "").trim();
-  s.smtp.password = (E.SMTP_PASS || "").trim();
-  s.smtp.tls = String(E.SMTP_TLS || "true") !== "false";
-  s.smtp.authMethod = s.smtp.username ? "plain" : "";
-  await simpan(s);
-  console.log(`✓ SMTP aktif ke ${host}:${s.smtp.port} (pengirim ${s.smtp.username || "-"})`);
+  const username = (E.SMTP_USER || "").trim();
+  const port = Number(E.SMTP_PORT || 587);
+  await simpan({
+    smtp: {
+      enabled: true,
+      host,
+      port,
+      username,
+      password: (E.SMTP_PASS || "").trim(),
+      tls: String(E.SMTP_TLS || "true") !== "false",
+      authMethod: username ? "PLAIN" : "",
+    },
+  });
+  console.log(`✓ SMTP aktif ke ${host}:${port} (pengirim ${username || "-"})`);
 }
 
 async function main() {
@@ -158,6 +176,7 @@ async function main() {
   await aturS3();
   await aturBackup();
   await aturSmtp();
+  await aturPeringatanLogin();
   console.log("\nSelesai. Periksa di panel admin (Settings), lalu jalankan scripts/cek-produksi.sh.");
 }
 

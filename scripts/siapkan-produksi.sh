@@ -63,16 +63,18 @@ echo "✓ PocketBase jalan dan migrasi selesai."
 zona=$(curl -fsS "http://127.0.0.1:8090/api/collections/zona_ongkir/records?perPage=1" | grep -o '"totalItems":[0-9]*' | cut -d: -f2)
 echo "  Zona ongkir: ${zona:-0} baris (harus 6)"
 
-for k in kategori produk varian pesanan jasa tiket_servis portofolio; do
-  n=$(curl -fsS "http://127.0.0.1:8090/api/collections/$k/records?perPage=1" | grep -o '"totalItems":[0-9]*' | cut -d: -f2)
-  echo "  $k: ${n:-0} baris (harus 0)"
+# pesanan dan tiket_servis tertutup untuk publik (hanya superuser), jadi dicek lewat panel admin nanti.
+for k in kategori produk varian jasa portofolio; do
+  n=$(curl -sS --max-time 5 "http://127.0.0.1:8090/api/collections/$k/records?perPage=1" 2>/dev/null | grep -o '"totalItems":[0-9]*' | cut -d: -f2 || true)
+  if [ -z "${n:-}" ]; then echo "  $k: tidak bisa dicek lewat API publik (cek di panel admin, harus 0)"; else echo "  $k: $n baris (harus 0)"; fi
 done
-
 echo
 echo "== Langkah berikutnya (kamu yang mengetik) =="
-echo "Buat akun superuser (password kamu sendiri, jangan dibagikan):"
+echo "Buat akun superuser. Ketik email dan password sendiri; perintah di bawah tidak"
+echo "menyimpan password di riwayat shell dan tidak mencetaknya:"
 echo
-echo "  docker compose exec pocketbase /pb/pocketbase superuser upsert EMAIL_KAMU PASSWORD_KUAT --dir=/pb/pb_data"
+echo '  read -rp "Email superuser: " EM; read -rsp "Password: " PW; echo'
+echo '  docker compose exec -T pocketbase /pb/pocketbase superuser upsert "$EM" "$PW" --dir=/pb/pb_data; unset PW'
 echo
 echo "Lalu isi .env homelab (lihat .env.example) dan jalankan:"
 echo "  node scripts/siapkan-pocketbase.mjs"

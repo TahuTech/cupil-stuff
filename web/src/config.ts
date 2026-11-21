@@ -19,13 +19,11 @@ export const LINI: Record<string, string> = {
 };
 
 // ---------- Jasa servis ----------
+// Berat bawaan perangkat untuk ongkir kirim balik ada di server: pocketbase/pb_hooks/servis.js
+// (BERAT_PERANGKAT), karena semua angka tagihan dihitung di server.
 export const SERVIS = {
   // Alamat untuk mengirim perangkat (ditampilkan di halaman sukses bila cara kirim = kurir).
   alamatKirim: "Cupil Stuff — Jl. Contoh No. 1, Surabaya, Jawa Timur 60123 (isi alamat lengkap toko di web/src/config.ts)",
-  // Berat bawaan perangkat (gram) untuk hitung ongkir kirim balik memakai zona yang sama.
-  beratPerangkat: {
-    mouse: 300,
-    keyboard: 900,
-    lainnya: 500,
-  } as Record<string, number>,
+  // Info antar dan ambil langsung (ditampilkan di aturan dan di halaman sukses bila cara kirim = antar).
+  infoAntar: "Antar dan ambil langsung di Surabaya tanpa ongkir. Kabari dulu lewat WhatsApp untuk atur jam dan lokasi.",
 };

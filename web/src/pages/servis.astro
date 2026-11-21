@@ -3,18 +3,24 @@
 // dan form permintaan servis (buka tiket).
 import Base from "../layouts/Base.astro";
 import Maskot from "../components/Maskot.astro";
-import { TOKO, linkWA } from "../config";
-import { ambilJasa, ambilPortofolio } from "../lib/pb";
+import { TOKO, SERVIS, linkWA } from "../config";
+import { ambilJasa, ambilPortofolio, ambilZonaOngkir } from "../lib/pb";
+import { LABEL_PERANGKAT } from "../lib/servis";
 import { rupiah, teksPolos } from "../lib/format";
 
-const [jasa, portofolio] = await Promise.all([ambilJasa(), ambilPortofolio()]);
+const [jasa, portofolio, zona] = await Promise.all([ambilJasa(), ambilPortofolio(), ambilZonaOngkir()]);
+// provinsi kirim balik dari data zona saat build (sama dengan keranjang): Kota Surabaya paling atas
+const provinsi = zona
+  .flatMap((z) => z.provinsi)
+  .sort((a, b) => (a === "Kota Surabaya" ? -1 : b === "Kota Surabaya" ? 1 : a.localeCompare(b, "id")));
+const labelProvinsi = (p: string) => (p === "Jawa Timur" ? "Jawa Timur (selain Kota Surabaya)" : p);
 
 const aturan = [
   { judul: "Tanpa DP", isi: "Perangkat boleh dikirim dulu. Tidak perlu membayar di awal." },
-  { judul: "Bayar setelah selesai", isi: "Biaya dibayar penuh setelah servis selesai dan kamu setuju." },
+  { judul: "Bayar penuh setelah selesai", isi: "Biaya servis dibayar penuh setelah servis selesai, sesuai estimasi yang sudah kamu setujui." },
   { judul: "Pengecekan gratis", isi: "Tidak ada biaya untuk membuka dan mengecek perangkat." },
   { judul: "Tolak estimasi? Beres.", isi: "Kalau tidak cocok dengan estimasi, perangkat dikirim balik. Kamu hanya menanggung ongkir kirim balik." },
-  { judul: "Boleh antar langsung", isi: `Langsung antar ke ${TOKO.kota} tanpa biaya kirim.` },
+  { judul: "Boleh antar dan ambil langsung", isi: SERVIS.infoAntar },
 ];
 ---
 <Base judul="Servis mouse dan keyboard" deskripsi={`Servis mouse dan keyboard mechanical di ${TOKO.kota}. Cek gratis, bayar setelah selesai.`}>
@@ -48,7 +54,7 @@ const aturan = [
       <div class="grid-jasa">
         {jasa.map((j) => (
           <article class="kartu-jasa">
-            <span class="kode">{j.kode}</span>
+            <span class="kode">{j.kode}{j.perangkat && ` · ${LABEL_PERANGKAT[j.perangkat] ?? j.perangkat}`}</span>
             <h3>{j.nama}</h3>
             {j.deskripsi && <p class="deskripsi" set:html={j.deskripsi} />}
             <p class="harga-mulai">Mulai {rupiah(j.hargaMulai)}</p>
@@ -93,11 +99,12 @@ const aturan = [
         </label>
         <label class="kolom">
           <span>Perangkat</span>
-          <select id="perangkat-jenis" name="perangkat_jenis">
+          <select id="perangkat_jenis" name="perangkat_jenis">
             <option value="mouse">Mouse</option>
             <option value="keyboard">Keyboard</option>
             <option value="lainnya">Lainnya</option>
           </select>
+          <small class="galat" data-untuk="perangkat_jenis"></small>
         </label>
       </div>
 
@@ -117,7 +124,8 @@ const aturan = [
       <label class="kolom">
         <span>Foto perangkat <em>(opsional, maks 5)</em></span>
         <input id="foto" name="foto" type="file" accept="image/jpeg,image/png,image/webp" multiple />
-        <small class="bantuan">Foto otomatis dikecilkan sebelum diunggah.</small>
+        <small class="bantuan">JPG, PNG, atau WebP. Foto otomatis dikecilkan sebelum diunggah.</small>
+        <small class="galat" data-untuk="foto"></small>
         <ul class="pratinjau" id="pratinjau-foto"></ul>
       </label>
 
@@ -138,19 +146,23 @@ const aturan = [
         <legend>Cara kirim perangkat</legend>
         <label class="pilihan">
           <input type="radio" name="cara_kirim" value="kurir" checked />
-          <span><b>Kirim lewat kurir</b><small>Kami kabari alamat lewat WhatsApp setelah tiket dibuat.</small></span>
+          <span><b>Kirim lewat kurir</b><small>Alamat kirim muncul setelah tiket dibuat. Ongkir kirim balik ditanggung pemilik perangkat.</small></span>
         </label>
         <label class="pilihan">
           <input type="radio" name="cara_kirim" value="antar" />
-          <span><b>Antar langsung</b><small>Langsung ke {TOKO.kota} tanpa biaya kirim.</small></span>
+          <span><b>Antar dan ambil langsung</b><small>{SERVIS.infoAntar}</small></span>
         </label>
         <small class="galat" data-untuk="cara_kirim"></small>
       </fieldset>
 
-      <label class="kolom">
-        <span>Provinsi tujuan kirim balik <em>(opsional)</em></span>
-        <select id="provinsi" name="provinsi"><option value="">— pilih nanti —</option></select>
-        <small class="bantuan">Dipakai untuk hitung ongkir kirim balik bila servis dibatalkan.</small>
+      <label class="kolom" id="kolom-provinsi">
+        <span>Provinsi untuk kirim balik</span>
+        <select id="provinsi" name="provinsi">
+          <option value="">Pilih provinsi</option>
+          {provinsi.map((p) => <option value={p}>{labelProvinsi(p)}</option>)}
+        </select>
+        <small class="bantuan">Untuk menghitung ongkir kirim balik (J&amp;T, tarif per zona).</small>
+        <small class="galat" data-untuk="provinsi"></small>
       </label>
 
       <div class="galat-umum" id="galat-umum" role="alert" hidden></div>
@@ -173,7 +185,10 @@ const aturan = [
 </Base>
 
 <script>
-  import { kecilkanFoto, urlServis, MAKS_FOTO_SERVIS, type PesananDibuatServis } from "../lib/servis";
+  import {
+    kecilkanFoto, urlServis, validasiServis, validasiPilihanFoto, MAKS_FOTO_SERVIS,
+    type IsianServis, type PesananDibuatServis,
+  } from "../lib/servis";
   import { linkWA, TOKO, SERVIS } from "../config";
 
   const form = document.getElementById("servis") as HTMLFormElement;
@@ -181,81 +196,64 @@ const aturan = [
   const tombol = document.getElementById("kirim") as HTMLButtonElement;
   const pratinjau = document.getElementById("pratinjau-foto") as HTMLElement;
   const inputFoto = document.getElementById("foto") as HTMLInputElement;
+  const kolomProvinsi = document.getElementById("kolom-provinsi") as HTMLElement;
 
-  // Isi provinsi dari zona ongkir (sama dengan keranjang)
-  (async () => {
-    try {
-      const pb = (import.meta.env.PUBLIC_PB_URL || "http://127.0.0.1:8090").replace(/\/$/, "");
-      const dasar = import.meta.env.DEV ? "" : pb;
-      const res = await fetch(`${dasar}/api/collections/zona_ongkir/records?perPage=50&sort=urutan`);
-      if (!res.ok) return;
-      const data = await res.json();
-      const sel = document.getElementById("provinsi") as HTMLSelectElement;
-      const semua = (data.items as { provinsi: string[] }[]).flatMap((z) => z.provinsi || []).sort((a, b) => a.localeCompare(b, "id"));
-      for (const p of semua) {
-        const o = document.createElement("option");
-        o.value = p;
-        o.textContent = p;
-        sel.appendChild(o);
-      }
-    } catch {}
-  })();
+  const nilai = (id: string) =>
+    (document.getElementById(id) as HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement | null)?.value ?? "";
+  const caraKirim = () => (form.querySelector('input[name="cara_kirim"]:checked') as HTMLInputElement | null)?.value ?? "";
+  const isian = (): IsianServis => ({
+    nama: nilai("nama"), wa: nilai("wa"), perangkat_jenis: nilai("perangkat_jenis"), perangkat: nilai("perangkat"),
+    keluhan: nilai("keluhan"), cara_kirim: caraKirim(), provinsi: nilai("provinsi"), jasa: nilai("jasa"),
+  });
+  const fotoTerpilih = () => Array.from(inputFoto.files || []);
 
-  function nilai(id: string) {
-    return (document.getElementById(id) as HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement)?.value.trim() ?? "";
+  // provinsi hanya perlu jika dikirim lewat kurir
+  function aturProvinsi() {
+    kolomProvinsi.hidden = caraKirim() !== "kurir";
+  }
+  form.querySelectorAll('input[name="cara_kirim"]').forEach((r) => r.addEventListener("change", aturProvinsi));
+  aturProvinsi();
+
+  function tampilkanGalat(galat: Record<string, string>) {
+    document.querySelectorAll<HTMLElement>("[data-untuk]").forEach((el) => {
+      el.textContent = galat[el.dataset.untuk || ""] || "";
+    });
+    form.querySelectorAll<HTMLInputElement>("input, select, textarea").forEach((el) => {
+      el.setAttribute("aria-invalid", String(!!galat[el.name]));
+    });
+    const ada = Object.keys(galat).length > 0;
+    galatUmum.hidden = !ada;
+    galatUmum.textContent = ada ? galat.umum || "Periksa lagi isian yang ditandai merah." : "";
   }
 
-  // pratinjau foto + batasi 5
+  // pratinjau foto; periksa jumlah dan jenis berkas
   inputFoto.addEventListener("change", () => {
-    const berkas = Array.from(inputFoto.files || []).slice(0, MAKS_FOTO_SERVIS);
+    const berkas = fotoTerpilih();
     pratinjau.replaceChildren(
-      ...berkas.map((b) => {
+      ...berkas.slice(0, MAKS_FOTO_SERVIS).map((b) => {
         const li = document.createElement("li");
         const img = document.createElement("img");
         img.src = URL.createObjectURL(b);
-        img.alt = b.name;
+        img.alt = "";
         li.appendChild(img);
         return li;
       }),
     );
-    if (berkas.length < (inputFoto.files?.length || 0)) {
-      tampilkanGalat({ foto: `Maksimal ${MAKS_FOTO_SERVIS} foto.` });
-    }
+    const g = validasiPilihanFoto(berkas);
+    const el = document.querySelector<HTMLElement>('[data-untuk="foto"]');
+    if (el) el.textContent = g;
+    inputFoto.setAttribute("aria-invalid", String(!!g));
   });
-
-  function tampilkanGalat(galat: Record<string, string>) {
-    document.querySelectorAll<HTMLElement>("[data-untuk]").forEach((el) => {
-      const pesan = galat[el.dataset.untuk || ""];
-      el.textContent = pesan || "";
-    });
-    form.querySelectorAll<HTMLElement>("input, select, textarea").forEach((el) => {
-      el.setAttribute("aria-invalid", String(!!galat[el.id] || !!galat[el.name]));
-    });
-    if (Object.keys(galat).length) {
-      galatUmum.hidden = false;
-      galatUmum.textContent = galat.umum || "Periksa lagi isian yang ditandai merah.";
-    } else {
-      galatUmum.hidden = true;
-      galatUmum.textContent = "";
-    }
-  }
-
-  // validasi ringan di browser (server tetap memeriksa ulang)
-  function validasi() {
-    const g: Record<string, string> = {};
-    if (nilai("nama").length < 2) g.nama = "Nama minimal 2 huruf.";
-    if (!/^(\+?62|0)8\d{7,12}$/.test(nilai("wa").replace(/[\s-]/g, ""))) g.wa = "Nomor WhatsApp tidak valid.";
-    if (nilai("perangkat").length < 2) g.perangkat = "Isi merek/tipe perangkat.";
-    if (nilai("keluhan").length < 10) g.keluhan = "Ceritakan keluhan minimal 10 huruf.";
-    return g;
-  }
 
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
-    const g = validasi();
+    const data = isian();
+    const g = validasiServis(data);
+    const gFoto = validasiPilihanFoto(fotoTerpilih());
+    if (gFoto) g.foto = gFoto;
     tampilkanGalat(g);
     if (Object.keys(g).length) {
-      document.getElementById(Object.keys(g)[0])?.focus();
+      form.querySelector<HTMLElement>(`[name="${Object.keys(g)[0]}"]`)?.focus();
       return;
     }
 
@@ -263,38 +261,23 @@ const aturan = [
     tombol.textContent = "Mengirim…";
     try {
       const fd = new FormData();
-      fd.set("jasa", nilai("jasa"));
-      fd.set("perangkat", nilai("perangkat"));
-      fd.set("keluhan", nilai("keluhan"));
-      fd.set("nama", nilai("nama"));
-      fd.set("wa", nilai("wa"));
-      const cara = (form.querySelector('input[name="cara_kirim"]:checked') as HTMLInputElement)?.value || "kurir";
-      fd.set("cara_kirim", cara);
-      fd.set("provinsi", nilai("provinsi"));
-      // jenis perangkat untuk berat kirim balik disimpan di keluhan tidak; kirim terpisah bila perlu
-      const jenisPerangkat = nilai("perangkat-jenis");
-      fd.set("perangkat_jenis", jenisPerangkat);
-
-      const berkas = Array.from(inputFoto.files || []).slice(0, MAKS_FOTO_SERVIS);
-      for (const b of berkas) {
+      for (const [k, v] of Object.entries(data)) fd.set(k, v);
+      for (const b of fotoTerpilih()) {
         const kecil = await kecilkanFoto(b);
         fd.append("foto", new File([kecil], b.name.replace(/\.\w+$/, "") + ".jpg", { type: "image/jpeg" }));
       }
 
       const res = await fetch(urlServis(), { method: "POST", body: fd });
-      const data = await res.json().catch(() => ({}));
+      const balas = await res.json().catch(() => ({}));
       if (!res.ok) {
-        if (res.status === 400 && data.galat) {
-          tampilkanGalat({ ...data.galat, umum: data.galat.umum ?? data.pesan });
-        } else {
-          tampilkanGalat({ umum: data.pesan ?? "Tiket belum bisa dibuat. Coba lagi sebentar." });
-        }
+        if (res.status === 400 && balas.galat) tampilkanGalat({ ...balas.galat, umum: balas.galat.umum ?? balas.pesan });
+        else if (res.status === 413) tampilkanGalat({ foto: "Foto terlalu besar. Kurangi jumlah atau ukuran foto." });
+        else tampilkanGalat({ umum: balas.pesan ?? "Tiket belum bisa dibuat. Coba lagi sebentar." });
         tombol.disabled = false;
         tombol.textContent = "Buat tiket servis";
         return;
       }
-
-      tampilkanSukses(data as PesananDibuatServis, cara);
+      tampilkanSukses(balas as PesananDibuatServis, data.cara_kirim);
     } catch {
       tampilkanGalat({ umum: "Tidak bisa terhubung ke server. Coba lagi, atau hubungi kami lewat WhatsApp." });
       tombol.disabled = false;
@@ -307,15 +290,13 @@ const aturan = [
     const sukses = document.getElementById("sukses") as HTMLElement;
     sukses.hidden = false;
     document.getElementById("nomor-tiket")!.textContent = hasil.nomor;
-    const info = document.getElementById("info-kirim")!;
-    info.textContent =
+    document.getElementById("info-kirim")!.textContent =
       cara === "kurir"
-        ? `Kirim perangkat ke: ${SERVIS.alamatKirim}. Sertakan nomor tiket di paket.`
-        : `Antar langsung ke ${TOKO.kota}. Sebutkan nomor tiket saat datang.`;
+        ? `Kirim perangkat ke: ${SERVIS.alamatKirim}. Tulis nomor tiket di paket.`
+        : `${SERVIS.infoAntar} Sebutkan nomor tiket saat datang.`;
     const wa = document.getElementById("wa-tiket") as HTMLAnchorElement;
     wa.href = linkWA(`Halo ${TOKO.nama}, saya baru membuat tiket servis ${hasil.nomor}. Mohon info langkah selanjutnya.`);
-    const cek = document.getElementById("cek-tiket") as HTMLAnchorElement;
-    cek.href = `/cek-tiket?nomor=${encodeURIComponent(hasil.nomor)}`;
+    (document.getElementById("cek-tiket") as HTMLAnchorElement).href = `/cek-tiket?nomor=${encodeURIComponent(hasil.nomor)}`;
     sukses.scrollIntoView({ behavior: "smooth", block: "start" });
   }
 </script>
@@ -364,7 +345,7 @@ const aturan = [
   .kolom { display: grid; gap: 6px; font-size: 0.9rem; }
   .kolom > span { font-weight: 600; }
   .kolom em { font-weight: 400; color: var(--muted); font-style: normal; }
-  #servis input, #servis select, #servis textarea {
+  #servis input:not([type="radio"]), #servis select, #servis textarea {
     font: inherit; padding: 10px 12px; border: 1px solid var(--line); border-radius: var(--radius);
     background: var(--card); width: 100%;
   }
@@ -382,7 +363,7 @@ const aturan = [
   .cara-kirim { border: 1px solid var(--line); border-radius: var(--radius); padding: 12px 14px; display: grid; gap: 10px; }
   .cara-kirim legend { font-weight: 600; font-size: 0.9rem; padding: 0 4px; }
   .pilihan { display: flex; gap: 10px; align-items: flex-start; cursor: pointer; }
-  .pilihan input { margin-top: 3px; }
+  .pilihan input { flex: none; width: 18px; height: 18px; margin: 2px 0 0; accent-color: var(--text); }
   .pilihan span { display: grid; gap: 2px; }
   .pilihan small { color: var(--muted); font-size: 0.82rem; }
 
@@ -401,8 +382,8 @@ const aturan = [
     .hero-servis { flex-direction: column-reverse; align-items: flex-start; gap: 12px; }
     .hero-servis h1 { font-size: 1.35rem; }
     .baris { grid-template-columns: 1fr; }
-    .aksi { width: 100%; }
-    .aksi .tombol { flex: 1; }
+    .aksi { width: 100%; flex-direction: column; }
+    .aksi .tombol { width: 100%; }
   }
 </style>
 

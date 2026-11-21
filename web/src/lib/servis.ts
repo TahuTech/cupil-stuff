@@ -1,5 +1,8 @@
-// Helper form servis di browser: alamat route, pengecilan foto sebelum upload,
-// dan tipe balasan. Validasi utama tetap di server (pb_hooks/servis.js).
+// Helper form servis di browser: validasi (aturan sama dengan pb_hooks/servis.js, dijaga
+// oleh servis.test.ts), alamat route, pengecilan foto sebelum upload, dan tipe balasan.
+// Validasi di sini hanya untuk kenyamanan; server tetap memeriksa ulang semuanya.
+
+import { normalisasiWA } from "./checkout";
 
 /** Saat dev: relatif (diteruskan proxy Vite). Saat build: PUBLIC_PB_URL. */
 export function urlServis() {
@@ -41,6 +44,46 @@ export async function kecilkanFoto(berkas: File, maksSisi = 1280, kualitas = 0.8
 export type PesananDibuatServis = { nomor: string; status: string };
 
 export const MAKS_FOTO_SERVIS = 5;
+export const TIPE_FOTO = ["image/jpeg", "image/png", "image/webp"];
+
+export type IsianServis = {
+  nama: string;
+  wa: string;
+  perangkat_jenis: string;
+  perangkat: string;
+  keluhan: string;
+  cara_kirim: string;
+  provinsi: string;
+  jasa: string;
+};
+
+/** Field yang ditolak beserta pesannya (kunci sama dengan galat dari server). */
+export function validasiServis(i: IsianServis): Record<string, string> {
+  const g: Record<string, string> = {};
+  const rapi = (v: string) => v.replace(/\s+/g, " ").trim();
+  const nama = rapi(i.nama);
+  const perangkat = rapi(i.perangkat);
+  const keluhan = i.keluhan.replace(/[ \t]+/g, " ").replace(/\n{3,}/g, "\n\n").trim();
+  if (nama.length < 2 || nama.length > 80) g.nama = "Nama 2–80 huruf.";
+  if (!normalisasiWA(i.wa)) g.wa = "Nomor WhatsApp tidak valid. Contoh: 0812 3456 7890.";
+  if (!["mouse", "keyboard", "lainnya"].includes(i.perangkat_jenis)) g.perangkat_jenis = "Pilih jenis perangkat.";
+  if (perangkat.length < 2 || perangkat.length > 80) g.perangkat = "Isi merek/tipe perangkat 2–80 huruf (mis. Logitech G102).";
+  if (keluhan.length < 10 || keluhan.length > 1000) g.keluhan = "Ceritakan keluhannya 10–1000 huruf.";
+  if (!["kurir", "antar"].includes(i.cara_kirim)) g.cara_kirim = "Pilih cara kirim perangkat.";
+  if (i.cara_kirim === "kurir") {
+    const prov = rapi(i.provinsi);
+    if (!prov || prov.length > 60) g.provinsi = "Pilih provinsi untuk kirim balik.";
+  }
+  if (i.jasa && !/^[a-z0-9]{15}$/.test(i.jasa)) g.jasa = "Jenis servis tidak valid.";
+  return g;
+}
+
+/** Periksa foto yang dipilih (sebelum dikecilkan). Hasil: pesan galat atau "". */
+export function validasiPilihanFoto(berkas: { type: string }[]): string {
+  if (berkas.length > MAKS_FOTO_SERVIS) return `Maksimal ${MAKS_FOTO_SERVIS} foto.`;
+  if (berkas.some((b) => !TIPE_FOTO.includes(b.type))) return "Foto harus berupa gambar JPG, PNG, atau WebP.";
+  return "";
+}
 
 export const LABEL_PERANGKAT: Record<string, string> = {
   mouse: "Mouse",

@@ -9,6 +9,7 @@ const JAM = 60 * 60 * 1000;
 const BATAS = {
   checkout: { dibuat: 10, percobaan: 30, durasi: JAM, benda: "pesanan" },
   servis: { dibuat: 10, percobaan: 30, durasi: JAM, benda: "tiket servis" },
+  ulasan: { dibuat: 5, percobaan: 20, durasi: JAM, benda: "ulasan" },
 };
 
 // ---------- fungsi murni (diuji di web/src/lib/kuota-hook.test.ts) ----------
@@ -27,7 +28,9 @@ function tambah(data, sekarang, durasi) {
 function pesanPenuh(jenis, benda, sisaMs) {
   const menit = Math.max(1, Math.ceil(sisaMs / 60000));
   if (jenis === "dibuat") {
-    return "Kamu sudah membuat cukup banyak " + benda + " dalam satu jam terakhir. Coba lagi sekitar " + menit + " menit lagi, atau hubungi kami lewat WhatsApp.";
+    // "benda" untuk pesanan/tiket = objek yang dibuat; untuk ulasan = yang dikirim
+    const awalan = benda === "ulasan" ? "mengirim" : "membuat";
+    return "Kamu sudah " + awalan + " cukup banyak " + benda + " dalam satu jam terakhir. Coba lagi sekitar " + menit + " menit lagi, atau hubungi kami lewat WhatsApp.";
   }
   return "Terlalu banyak percobaan dalam satu jam terakhir. Coba lagi sekitar " + menit + " menit lagi, atau hubungi kami lewat WhatsApp.";
 }

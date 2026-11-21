@@ -1,7 +1,8 @@
 /// <reference path="../pb_data/types.d.ts" />
 
 // Build ulang katalog statis saat data yang tampil di katalog berubah.
-const koleksiKatalog = ["kategori", "produk", "varian", "zona_ongkir", "jasa", "portofolio"];
+// `ulasan` ikut: ulasan yang disetujui (status → tampil) memicu build ulang.
+const koleksiKatalog = ["kategori", "produk", "varian", "zona_ongkir", "jasa", "portofolio", "ulasan"];
 
 onRecordAfterCreateSuccess((e) => {
   require(`${__hooks}/deploy.js`).triggerBuild();

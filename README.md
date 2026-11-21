@@ -33,9 +33,12 @@ cupil-stuff/
 └── web/                      katalog Astro (di-deploy ke Cloudflare Pages)
     └── src/
         ├── config.ts         nama toko, nomor WhatsApp, alamat kirim dan info antar servis
+        ├── components/       Maskot, BannerServer (banner saat homelab mati)
         ├── lib/pb.ts         ambil data dari PocketBase saat build
         ├── lib/ongkir.ts     rumus ongkir (dipakai di tahap 3) + ongkir.test.ts
         ├── lib/servis.ts     form servis (validasi = server, kecilkan foto) + servis.test.ts, servis-hook.test.ts
+        ├── lib/status-server.ts  deteksi server hidup/mati (/api/health, timeout 3 dtk, cache 60 dtk) + test
+        ├── lib/pesan-wa.ts   isi pesan WhatsApp saat server mati (keranjang, servis, cek tiket/bayar) + test
         └── pages/            landing (/), katalog, produk, keranjang, bayar, servis, cek-tiket, 404
 ```
 

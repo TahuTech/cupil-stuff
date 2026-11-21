@@ -48,6 +48,8 @@ web/                        proyek Astro
 
 Link "kembali ke katalog" selalu ke `/katalog`, bukan `/`.
 
+Halaman `/keranjang`, `/servis`, `/cek-tiket`, dan `/bayar` menampilkan banner "Pemesanan otomatis sedang istirahat" dan beralih ke WhatsApp saat homelab mati (`lib/status-server.ts`). Landing, katalog, dan produk tidak menampilkan banner.
+
 Build memakai `build.format: "file"` (`/katalog` → `katalog.html`). Route API khusus: `POST /api/checkout` (`pb_hooks/checkout.pb.js`), `GET /api/pesanan/{nomor}?wa=XXXX` (`pb_hooks/pesanan.api.pb.js`), `POST /api/servis` (`pb_hooks/servis.pb.js`), `GET /api/tiket/{nomor}?wa=XXXX` (`pb_hooks/tiket.pb.js`); CORS diatur lewat `PB_ORIGINS` (flag `--origins` di compose).
 
 ## Data (koleksi PocketBase)

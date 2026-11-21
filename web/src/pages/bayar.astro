@@ -39,24 +39,39 @@ import Maskot from "../components/Maskot.astro";
 import { rupiah } from "../lib/format";
 import { linkWA, TOKO } from "../config";
 import { qrisDenganNominal } from "../lib/qris";
-import { encode, renderSVG } from "uqr";
+import { renderSVG } from "uqr";
 
 const QRIS = (import.meta.env.PUBLIC_QRIS_STATIS || "").trim();
 const pb = (import.meta.env.PUBLIC_PB_URL || "http://127.0.0.1:8090").replace(/\/$/, "");
 
-const $ = (id) => document.getElementById(id);
-function el(tag, cls, txt) {
+// Bentuk balasan GET /api/pesanan/{nomor} (pocketbase/pb_hooks/pesanan.api.pb.js)
+type ItemPesanan = { nama: string; varian_nama?: string; warna?: string | null; jumlah: number; subtotal: number };
+type DetailPesanan = {
+  nomor: string;
+  items: ItemPesanan[];
+  ongkir: number;
+  potongan_ongkir: number;
+  total: number;
+  ongkir_konfirmasi: boolean;
+  berat_ditagih_kg: number;
+  zona: { nama: string; estimasi: string } | null;
+  status_bayar: string;
+  resi?: string;
+};
+
+const $ = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T;
+function el<K extends keyof HTMLElementTagNameMap>(tag: K, cls?: string, txt?: string) {
   const e = document.createElement(tag);
   if (cls) e.className = cls;
   if (txt) e.textContent = txt;
   return e;
 }
 
-function tampil(id) {
+function tampil(id: string) {
   ["layar-masuk", "layar-pesanan", "layar-error"].forEach((x) => $(x).hidden = x !== id);
 }
 
-function render(ps) {
+function render(ps: DetailPesanan) {
   const sub = ps.total - ps.ongkir + ps.potongan_ongkir;
   if (ps.status_bayar === "lunas") {
     $("judul-bayar").textContent = "Pembayaran diterima ✅";
@@ -69,7 +84,7 @@ function render(ps) {
     $("info-bayar").textContent = "Silakan selesaikan pembayaran.";
   }
 
-  $("rincian").replaceChildren(...ps.items.map((it) => {
+  $("rincian").replaceChildren(...ps.items.map((it: ItemPesanan) => {
     const li = document.createElement("li");
     const kiri = document.createElement("span");
     let l = it.nama;
@@ -83,7 +98,7 @@ function render(ps) {
     return li;
   }));
 
-  const baris = [["Subtotal", rupiah(sub)]];
+  const baris: [string, string, string?][] = [["Subtotal", rupiah(sub)]];
   if (ps.ongkir_konfirmasi) {
     baris.push(["Ongkir", "dikonfirmasi via WhatsApp"]);
   } else {
@@ -126,7 +141,7 @@ function render(ps) {
     if (ok) {
       b.appendChild(el("p", "nominal", total));
       const qr = el("div", "qr");
-      qr.innerHTML = renderSVG(encode(qris, { ecc: "M", border: 4 }));
+      qr.innerHTML = renderSVG(qris, { ecc: "M", border: 2 }); // dari teks QRIS, bukan hasil encode()
       b.appendChild(qr);
     }
     b.appendChild(el("p", "langkah-bayar", "1. Scan QRIS dengan aplikasi bank/e-wallet.\n2. Bayar sesuai nominal.\n3. Kirim bukti bayar via WhatsApp."));
@@ -140,13 +155,13 @@ function render(ps) {
 
 const p = new URLSearchParams(location.search);
 const nUrl = p.get("nomor");
-if (nUrl) { $("nomor").value = nUrl; $("wa4").focus(); }
+if (nUrl) { $<HTMLInputElement>("nomor").value = nUrl; $("wa4").focus(); }
 
 $("form-masuk").addEventListener("submit", async (e) => {
   e.preventDefault();
-  const nomor = $("nomor").value.trim();
-  const wa4 = $("wa4").value.trim();
-  const btn = $("btn-cek");
+  const nomor = $<HTMLInputElement>("nomor").value.trim();
+  const wa4 = $<HTMLInputElement>("wa4").value.trim();
+  const btn = $<HTMLButtonElement>("btn-cek");
   const galat = $("galat-masuk");
   if (!nomor || wa4.length !== 4 || !/^\d{4}$/.test(wa4)) {
     galat.textContent = "Isi nomor pesanan dan 4 digit WA.";
@@ -181,7 +196,7 @@ $("form-masuk").addEventListener("submit", async (e) => {
 
 $("btn-kembali").addEventListener("click", () => {
   tampil("layar-masuk");
-  $("nomor").value = ""; $("wa4").value = "";
+  $<HTMLInputElement>("nomor").value = ""; $<HTMLInputElement>("wa4").value = "";
 });
 
 tampil("layar-masuk");

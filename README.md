@@ -128,10 +128,12 @@ Di atas 5 kg atau provinsi tanpa zona: pesanan tetap tersimpan dengan `ongkir_ko
 
 ## Panduan pemilik toko: memproses pesanan
 
+**Akses panel admin:** buka `api.<domain>/_/` (login lewat Cloudflare Access dulu). Tidak ada panel admin terpisah — semua proses dilakukan langsung dari dashboard PocketBase bawaan di koleksi **pesanan**. Setelah login, buka `api.<domain>/_/#/collections/pesanan`, klik record pesanan yang ingin diproses, ubah field yang diperlukan, lalu simpan. Link WhatsApp (`link_wa_*`) bisa langsung diklik dari panel untuk mengirim pesan ke pembeli.
+
 ### Pesanan biasa (≤ 5 kg)
 
 1. **Cek mutasi** — Pastikan uang masuk ke rekening sesuai nominal `total` di pesanan.
-2. **Ubah status bayar → lunas** — Buka panel admin `api.<domain>/_/#/collections/pesanan`, cari pesanan, ubah `status_bayar` ke `lunas` lalu simpan. Stok otomatis berkurang.
+2. **Ubah status bayar → lunas** — Di panel admin, ubah `status_bayar` ke `lunas` lalu simpan. Stok otomatis berkurang.
 3. **Kemas barang** — Siapkan paket sesuai rincian `items`.
 4. **Isi resi** — Isi nomor resi J&T, lalu ubah `status_kirim` ke `dikirim`. Pembeli bisa mengecek resi di halaman `/bayar`.
 5. **Kirim info resi** — Klik `link_wa_resi` di panel admin untuk mengirim pesan WhatsApp ke pembeli (nomor resi + tautan lacak).

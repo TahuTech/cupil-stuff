@@ -3,7 +3,8 @@ import { defineConfig } from "astro/config";
 // Situs statis: data diambil dari PocketBase saat build,
 // lalu Cloudflare Pages menyajikan file HTML hasil build.
 export default defineConfig({
-  site: process.env.PUBLIC_SITE_URL || "https://cupilstuff.example",
+  // alamat situs dari env (Cloudflare Pages: PUBLIC_SITE_URL); tidak ada domain tertulis di kode
+  site: process.env.PUBLIC_SITE_URL || undefined,
   output: "static",
   trailingSlash: "never",
   // /katalog → katalog.html (bukan katalog/index.html), supaya Cloudflare Pages

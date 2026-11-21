@@ -40,9 +40,10 @@ import { rupiah } from "../lib/format";
 import { linkWA, TOKO } from "../config";
 import { qrisDenganNominal } from "../lib/qris";
 import { renderSVG } from "uqr";
+import { urlApi } from "../lib/api";
+import { linkLacakJNT } from "../lib/lacak";
 
 const QRIS = (import.meta.env.PUBLIC_QRIS_STATIS || "").trim();
-const pb = (import.meta.env.PUBLIC_PB_URL || "http://127.0.0.1:8090").replace(/\/$/, "");
 
 // Bentuk balasan GET /api/pesanan/{nomor} (pocketbase/pb_hooks/pesanan.api.pb.js)
 type ItemPesanan = { nama: string; varian_nama?: string; warna?: string | null; jumlah: number; subtotal: number };
@@ -120,7 +121,7 @@ function render(ps: DetailPesanan) {
   const b = $("bagian-bayar");
   if (ps.status_bayar === "lunas" && ps.resi) {
     const a = el("a", "tombol utama", "Lacak resi J&T");
-    a.href = "https://jet.co.id/cek-resi?resi=" + encodeURIComponent(ps.resi);
+    a.href = linkLacakJNT(); // nomor resi ditampilkan di atas; tempel di halaman lacak J&T
     a.target = "_blank";
     b.replaceChildren(el("h2", "", "Resi pengiriman"), el("p", "", "No. resi: " + ps.resi), a);
   } else if (ps.status_bayar === "lunas") {
@@ -170,7 +171,7 @@ $("form-masuk").addEventListener("submit", async (e) => {
   }
   btn.disabled = true; btn.textContent = "Mengecek..."; galat.hidden = true;
   try {
-    const r = await fetch(pb + "/api/pesanan/" + encodeURIComponent(nomor) + "?wa=" + wa4);
+    const r = await fetch(urlApi("/api/pesanan/" + encodeURIComponent(nomor) + "?wa=" + wa4));
     const bd = await r.json();
     if (!r.ok) {
       if (r.status === 429) galat.textContent = bd.pesan || "Terlalu banyak percobaan.";

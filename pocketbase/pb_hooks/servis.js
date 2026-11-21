@@ -6,6 +6,7 @@
 
 // __hooks tersedia di PocketBase, __dirname di Node (unit test)
 const ongkir = require((typeof __hooks !== "undefined" ? __hooks : __dirname) + "/ongkir.js");
+const B = require((typeof __hooks !== "undefined" ? __hooks : __dirname) + "/bersama.js");
 
 const BATAS = {
   nama: [2, 80],
@@ -177,10 +178,7 @@ function totalTagihan(t) {
 
 // ---------- link WhatsApp untuk pemilik toko (field url terhitung) ----------
 
-/** "Rp 150.000" tanpa bergantung pada locale (JSVM PocketBase belum tentu mendukung id-ID). */
-function rp(n) {
-  return "Rp " + String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, ".");
-}
+const rp = B.rp;
 
 /**
  * Link wa.me untuk pemilik toko mengirim kabar ke pembeli. "" jika belum berlaku.
@@ -192,7 +190,8 @@ function linkWA(t, opsi) {
   const wa = String(t.wa || "").replace(/\D/g, "");
   if (!t.nomor || !wa) return kosong;
   const halo = "Halo " + (t.nama || "Kak") + ",\n\n";
-  const cek = "\n\nCek status kapan saja: " + opsi.situs.replace(/\/$/, "") + "/cek-tiket?nomor=" + encodeURIComponent(t.nomor) + " (pakai 4 digit terakhir nomor WhatsApp ini).";
+  const halamanCek = B.tautanSitus(opsi.situs, "/cek-tiket?nomor=" + encodeURIComponent(t.nomor));
+  const cek = halamanCek ? "\n\nCek status kapan saja: " + halamanCek + " (pakai 4 digit terakhir nomor WhatsApp ini)." : "";
   const ke = function (pesan) { return "https://wa.me/" + wa + "?text=" + encodeURIComponent(pesan); };
   const hasil = { link_wa_diterima: "", link_wa_estimasi: "", link_wa_selesai: "", link_wa_lunas: "", link_wa_resi: "" };
 
@@ -230,7 +229,7 @@ function linkWA(t, opsi) {
 
   const resi = String(t.resi || "").trim();
   if (resi) {
-    hasil.link_wa_resi = ke(halo + "Perangkat untuk tiket *" + t.nomor + "* sudah dikirim balik 📦\n\nNo. resi J&T: *" + resi + "*\nLacak: https://jet.co.id/track?awb=" + encodeURIComponent(resi) + "\n\nTerima kasih sudah servis di " + opsi.toko + "!");
+    hasil.link_wa_resi = ke(halo + "Perangkat untuk tiket *" + t.nomor + "* sudah dikirim balik 📦\n\n" + B.teksLacak(resi) + "\n\nTerima kasih sudah servis di " + opsi.toko + "!");
   }
   return hasil;
 }

@@ -48,8 +48,7 @@ function isiTurunan(app, r, baru) {
 
   r.set("total_tagihan", S.totalTagihan(t));
 
-  const situs = $os.getenv("SITE_URL") || "https://cupilstuff.id";
-  const link = S.linkWA(t, { toko: "Cupil Stuff", situs: situs });
+  const link = S.linkWA(t, { toko: "Cupil Stuff", situs: require(__hooks + "/bersama.js").situsDariEnv() });
   for (const k in link) r.set(k, link[k]);
 }
 

@@ -3,19 +3,10 @@
 // Validasi di sini hanya untuk kenyamanan; server tetap memeriksa ulang semuanya.
 
 import { normalisasiWA } from "./checkout";
+import { urlApi } from "./api";
 
-/** Saat dev: relatif (diteruskan proxy Vite). Saat build: PUBLIC_PB_URL. */
-export function urlServis() {
-  if (import.meta.env.DEV) return "/api/servis";
-  const pb = (import.meta.env.PUBLIC_PB_URL || "http://127.0.0.1:8090").replace(/\/$/, "");
-  return `${pb}/api/servis`;
-}
-
-export function urlTiket() {
-  if (import.meta.env.DEV) return "/api/tiket";
-  const pb = (import.meta.env.PUBLIC_PB_URL || "http://127.0.0.1:8090").replace(/\/$/, "");
-  return `${pb}/api/tiket`;
-}
+export const urlServis = () => urlApi("/api/servis");
+export const urlTiket = () => urlApi("/api/tiket");
 
 /**
  * Kecilkan foto di browser sebelum upload (hemat kuota, muat server).

@@ -2,6 +2,8 @@
 // dijaga oleh checkout.test.ts) dan alamat route /api/checkout.
 // Validasi di sini hanya untuk kenyamanan; server tetap memeriksa ulang semuanya.
 
+import { urlApi } from "./api";
+
 export type IsianCheckout = { nama: string; wa: string; alamat: string; provinsi: string };
 
 export function normalisasiWA(v: string): string | null {
@@ -22,12 +24,7 @@ export function validasiIsian(i: IsianCheckout): Partial<Record<keyof IsianCheck
   return galat;
 }
 
-/** Saat dev: relatif (diteruskan proxy Vite). Saat build: PUBLIC_PB_URL. */
-export function urlCheckout() {
-  if (import.meta.env.DEV) return "/api/checkout";
-  const pb = (import.meta.env.PUBLIC_PB_URL || "http://127.0.0.1:8090").replace(/\/$/, "");
-  return `${pb}/api/checkout`;
-}
+export const urlCheckout = () => urlApi("/api/checkout");
 
 /** Balasan sukses dari /api/checkout (angka dari server). */
 export type PesananDibuat = {

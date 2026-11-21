@@ -106,5 +106,9 @@ Stok EDC dipakai bersama dengan marketplace dan diperbarui manual oleh pemilik. 
 - Setiap logika hitungan (ongkir, potongan, total, nominal QRIS, CRC) harus punya unit test.
 - Hitungan ongkir ada di dua tempat: `web/src/lib/ongkir.ts` dan `pocketbase/pb_hooks/ongkir.js`. Ubah keduanya bersamaan; `ongkir-hook.test.ts` memastikan hasilnya sama.
 - Isi `PUBLIC_QRIS_STATIS` jangan pernah ditampilkan atau dicatat di log, laporan, maupun commit.
+- Tidak ada domain situs tertulis di kode. Hook memakai env `SITE_URL` (tautan `/bayar`, `/cek-tiket`) dan `API_URL` (link panel admin) lewat `pb_hooks/bersama.js`; web memakai `PUBLIC_SITE_URL` / `PUBLIC_PB_URL`.
+- Route API dari browser selalu lewat `urlApi()` di `web/src/lib/api.ts` (relatif saat dev supaya lewat proxy Vite).
+- Link lacak J&T hanya dari `linkLacakJNT()` (`pb_hooks/bersama.js` dan `web/src/lib/lacak.ts`, dijaga sama oleh test).
+- Nilai contoh yang wajib diganti sebelum go-live ditandai `TODO(go-live)` (terutama `web/src/config.ts`).
 - Sebelum menyatakan selesai: jalankan `npm run build` di `web/`, dan untuk perubahan PocketBase jalankan `docker compose up -d --build` lalu cek `docker compose logs pocketbase`.
 - Satu tahap = satu branch atau commit yang rapi, dengan pesan commit Bahasa Indonesia.

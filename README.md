@@ -127,6 +127,8 @@ Urutannya: **kategori → produk → varian**.
 
 Di atas 5 kg atau provinsi tanpa zona: pesanan tetap tersimpan dengan `ongkir_konfirmasi`, QRIS tidak ditampilkan, dan pembeli diarahkan ke WhatsApp.
 
+Pembatasan per IP (dari header Cloudflare): paling banyak 10 pesanan dan 10 tiket servis per jam, serta 30 percobaan per jam untuk masing-masing route (termasuk isian yang ditolak). Pembeli yang melewati batas mendapat pesan untuk mencoba lagi beberapa menit kemudian atau menghubungi lewat WhatsApp. Batasnya ada di `pocketbase/pb_hooks/kuota.js`.
+
 ## Panduan pemilik toko: memproses pesanan
 
 **Akses panel admin:** buka `api.<domain>/_/` (login lewat Cloudflare Access dulu). Tidak ada panel admin terpisah — semua proses dilakukan langsung dari dashboard PocketBase bawaan di koleksi **pesanan**. Setelah login, buka `api.<domain>/_/#/collections/pesanan`, klik record pesanan yang ingin diproses, ubah field yang diperlukan, lalu simpan. Link WhatsApp (`link_wa_*`) bisa langsung diklik dari panel untuk mengirim pesan ke pembeli.

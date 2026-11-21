@@ -9,6 +9,11 @@ routerAdd(
   (e) => {
     const P = require(`${__hooks}/pesanan.js`);
 
+    // batas per IP (kuota.js): 10 pesanan dibuat + 30 percobaan per jam
+    const K = require(`${__hooks}/kuota.js`);
+    const penuh = K.periksa(e, "checkout");
+    if (penuh) return e.json(penuh.status, penuh.body);
+
     // JSON field dibaca lewat getString lalu JSON.parse
     const bacaJSON = (rec, field) => {
       try {
@@ -106,6 +111,7 @@ routerAdd(
     r.set("ongkir_konfirmasi", ps.ongkir_konfirmasi);
     r.set("status_bayar", "menunggu");
     e.app.save(r);
+    K.catatDibuat(e, "checkout");
 
     return e.json(200, {
       nomor,

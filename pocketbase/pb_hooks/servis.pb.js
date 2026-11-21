@@ -10,6 +10,11 @@ routerAdd(
   (e) => {
     const S = require(`${__hooks}/servis.js`);
 
+    // batas per IP (kuota.js): 10 tiket dibuat + 30 percobaan per jam
+    const K = require(`${__hooks}/kuota.js`);
+    const penuh = K.periksa(e, "servis");
+    if (penuh) return e.json(penuh.status, penuh.body);
+
     const info = e.requestInfo();
     const body = info.body || {};
 
@@ -77,6 +82,7 @@ routerAdd(
       return e.json(500, { pesan: "Tiket belum bisa dibuat. Coba lagi sebentar." });
     }
 
+    K.catatDibuat(e, "servis");
     return e.json(200, { nomor, status: "menunggu_perangkat" });
   },
   $apis.bodyLimit(8 * 1024 * 1024), // sampai 5 foto kecil + teks

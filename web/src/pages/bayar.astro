@@ -1,9 +1,11 @@
 ---
 import Base from "../layouts/Base.astro";
 import Maskot from "../components/Maskot.astro";
+import BannerServer from "../components/BannerServer.astro";
 ---
 
 <Base judul="Bayar pesanan" deskripsi="Cek dan bayar pesanan Cupil Stuff">
+  <BannerServer />
   <section class="bayar" id="layar-masuk" hidden>
     <Maskot ukuran={100} />
     <h1>Cek pesanan</h1>
@@ -16,6 +18,7 @@ import Maskot from "../components/Maskot.astro";
                placeholder="1234" required autocomplete="off" /></label>
       <button type="submit" class="tombol utama" id="btn-cek">Cek pesanan</button>
       <p class="galat" id="galat-masuk" hidden></p>
+      <p class="galat" id="galat-server" hidden></p>
     </form>
   </section>
 
@@ -42,6 +45,18 @@ import { qrisDenganNominal } from "../lib/qris";
 import { renderSVG } from "uqr";
 import { urlApi } from "../lib/api";
 import { linkLacakJNT } from "../lib/lacak";
+import { deteksiAwal, fetchServer, gagalKarenaServer, aturBannerServer } from "../lib/status-server";
+import { pesanCekPesananWA } from "../lib/pesan-wa";
+
+let serverMati = false;
+function setServerMati(mati: boolean) {
+  serverMati = mati;
+  aturBannerServer(mati);
+}
+deteksiAwal().then((status) => setServerMati(status === "mati"));
+document.addEventListener("visibilitychange", () => {
+  if (!document.hidden) deteksiAwal().then((status) => setServerMati(status === "mati"));
+});
 
 const QRIS = (import.meta.env.PUBLIC_QRIS_STATIS || "").trim();
 
@@ -164,6 +179,14 @@ $("form-masuk").addEventListener("submit", async (e) => {
   const wa4 = $<HTMLInputElement>("wa4").value.trim();
   const btn = $<HTMLButtonElement>("btn-cek");
   const galat = $("galat-masuk");
+  const galatServer = $("galat-server");
+  galatServer.hidden = true;
+
+  // Server mati: pengecekan tidak tersedia, tawarkan WA berisi nomor pesanan.
+  if (serverMati) {
+    tampilkanTidakTersedia(nomor);
+    return;
+  }
   if (!nomor || wa4.length !== 4 || !/^\d{4}$/.test(wa4)) {
     galat.textContent = "Isi nomor pesanan dan 4 digit WA.";
     galat.hidden = false;
@@ -171,7 +194,7 @@ $("form-masuk").addEventListener("submit", async (e) => {
   }
   btn.disabled = true; btn.textContent = "Mengecek..."; galat.hidden = true;
   try {
-    const r = await fetch(urlApi("/api/pesanan/" + encodeURIComponent(nomor) + "?wa=" + wa4));
+    const r = await fetchServer(urlApi("/api/pesanan/" + encodeURIComponent(nomor) + "?wa=" + wa4));
     const bd = await r.json();
     if (!r.ok) {
       if (r.status === 429) galat.textContent = bd.pesan || "Terlalu banyak percobaan.";
@@ -182,6 +205,11 @@ $("form-masuk").addEventListener("submit", async (e) => {
         tampil("layar-error");
         btn.disabled = false; btn.textContent = "Cek pesanan";
         return;
+      } else if (gagalKarenaServer(r.status)) {
+        setServerMati(true);
+        tampilkanTidakTersedia(nomor);
+        btn.disabled = false; btn.textContent = "Cek pesanan";
+        return;
       } else galat.textContent = bd.pesan || "Gagal.";
       galat.hidden = false;
       btn.disabled = false; btn.textContent = "Cek pesanan";
@@ -189,11 +217,24 @@ $("form-masuk").addEventListener("submit", async (e) => {
     }
     render(bd);
   } catch (er) {
-    galat.textContent = "Tidak bisa terhubung ke server.";
-    galat.hidden = false;
+    setServerMati(true);
+    tampilkanTidakTersedia(nomor);
   }
   btn.disabled = false; btn.textContent = "Cek pesanan";
 });
+
+// Server mati: pesan + tautan WA berisi nomor pesanan yang diketik.
+function tampilkanTidakTersedia(nomor: string) {
+  const galatServer = $("galat-server");
+  galatServer.replaceChildren(document.createTextNode("Pengecekan sedang tidak tersedia. "));
+  const a = document.createElement("a");
+  a.href = linkWA(pesanCekPesananWA(nomor, TOKO.nama));
+  a.target = "_blank";
+  a.rel = "noopener";
+  a.textContent = "Hubungi via WhatsApp";
+  galatServer.appendChild(a);
+  galatServer.hidden = false;
+}
 
 $("btn-kembali").addEventListener("click", () => {
   tampil("layar-masuk");

@@ -1,6 +1,7 @@
 ---
 import Base from "../layouts/Base.astro";
 import Maskot from "../components/Maskot.astro";
+import BannerServer from "../components/BannerServer.astro";
 import { ambilKatalog, ambilZonaOngkir, dataVarianKeranjang } from "../lib/pb";
 
 const { produk } = await ambilKatalog();
@@ -13,6 +14,7 @@ const provinsi = zona
 const labelProvinsi = (p: string) => (p === "Jawa Timur" ? "Jawa Timur (selain Kota Surabaya)" : p);
 ---
 <Base judul="Keranjang" deskripsi="Keranjang belanja Cupil Stuff.">
+  <BannerServer />
   <h1 class="judul">Keranjang</h1>
 
   <section class="kosong" id="kosong" hidden>
@@ -68,7 +70,7 @@ const labelProvinsi = (p: string) => (p === "Jawa Timur" ? "Jawa Timur (selain K
 
         <div class="galat-umum" id="galat-umum" role="alert" hidden></div>
         <button type="submit" class="tombol utama kirim" id="kirim">Buat pesanan</button>
-        <p class="catatan">Pembayaran lewat QRIS setelah pesanan dibuat. Stok baru dikurangi setelah pembayaran dikonfirmasi.</p>
+        <p class="catatan" id="catatan-pesan">Pembayaran lewat QRIS setelah pesanan dibuat. Stok baru dikurangi setelah pembayaran dikonfirmasi.</p>
       </form>
     </aside>
   </div>
@@ -221,14 +223,46 @@ const labelProvinsi = (p: string) => (p === "Jawa Timur" ? "Jawa Timur (selain K
   // ---------- checkout ----------
   import { validasiIsian, urlCheckout, KUNCI_PESANAN, type IsianCheckout, type PesananDibuat } from "../lib/checkout";
   import { kosongkanKeranjang } from "../lib/keranjang";
+  import { deteksiAwal, fetchServer, gagalKarenaServer, aturBannerServer } from "../lib/status-server";
+  import { pesanKeranjangWA, type OngkirWA } from "../lib/pesan-wa";
+  import { linkWA, TOKO } from "../config";
   const form = $("form-checkout") as HTMLFormElement;
   const tombolKirim = $("kirim") as HTMLButtonElement;
+  const catatan = $("catatan-pesan");
   const nilai = (id: string) => ($(id) as HTMLInputElement).value;
   let siapCheckout: ReturnType<typeof ringkasKeranjang> | null = null;
+  let ongkirTerakhir: OngkirWA | null = null;
+  let serverMati = false;
+
+  // label tombol berubah sesuai status server (hidup → "Buat pesanan", mati → "Pesan via WhatsApp")
+  function aturTombol() {
+    tombolKirim.textContent = serverMati ? "Pesan via WhatsApp" : "Buat pesanan";
+    if (catatan) {
+      catatan.textContent = serverMati
+        ? "Pemesanan otomatis sedang tidak tersedia. Pesanan akan dikirim lewat WhatsApp; total dan stok dikonfirmasi penjual."
+        : "Pembayaran lewat QRIS setelah pesanan dibuat. Stok baru dikurangi setelah pembayaran dikonfirmasi.";
+    }
+  }
+  function setServerMati(mati: boolean) {
+    serverMati = mati;
+    aturBannerServer(mati);
+    aturTombol();
+  }
+
+  // deteksi awal (60 detik cache); bila server hidup lagi, tombol kembali normal tanpa reload
+  deteksiAwal().then((status) => setServerMati(status === "mati"));
+  // saat tab kembali aktif, cek lagi (mis. homelab baru dinyalakan)
+  document.addEventListener("visibilitychange", () => {
+    if (!document.hidden) deteksiAwal().then((status) => setServerMati(status === "mati"));
+  });
 
   window.addEventListener("keranjang:ringkasan", (e) => {
     siapCheckout = (e as CustomEvent<ReturnType<typeof ringkasKeranjang>>).detail;
     form.hidden = siapCheckout.untukCheckout.length === 0;
+  });
+  window.addEventListener("keranjang:bayar", (e) => {
+    const d = (e as CustomEvent<{ bayar: OngkirWA }>).detail;
+    if (d?.bayar) ongkirTerakhir = d.bayar;
   });
 
   function tampilkanGalat(galat: Partial<Record<string, string>>) {
@@ -268,10 +302,25 @@ const labelProvinsi = (p: string) => (p === "Jawa Timur" ? "Jawa Timur (selain K
     }
     if (!siapCheckout || !siapCheckout.untukCheckout.length) return;
 
+    // Mode WhatsApp: server mati, kirim pesanan lewat WA (keranjang TIDAK dikosongkan
+    // sampai pembeli menekan tombol WA; QRIS tidak ditampilkan).
+    if (serverMati) {
+      if (!ongkirTerakhir) {
+        const zona = cariZona(isian.provinsi, daftarZona);
+        ongkirTerakhir = ringkasBayar(siapCheckout.subtotal, siapCheckout.beratGram, zona);
+      }
+      const pesan = pesanKeranjangWA(siapCheckout.baris, isian, ongkirTerakhir!, TOKO.nama);
+      const jendela = window.open(linkWA(pesan), "_blank", "noopener");
+      // Baru kosongkan keranjang setelah WA benar-benar dibuka (blokir popup → jangan kosongkan)
+      if (jendela) kosongkanKeranjang();
+      else galatUmum("Izinkan jendela baru untuk membuka WhatsApp, atau tekan tombol lagi.");
+      return;
+    }
+
     tombolKirim.disabled = true;
     tombolKirim.textContent = "Memproses…";
     try {
-      const res = await fetch(urlCheckout(), {
+      const res = await fetchServer(urlCheckout(), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ...isian, items: siapCheckout.untukCheckout }),
@@ -288,14 +337,20 @@ const labelProvinsi = (p: string) => (p === "Jawa Timur" ? "Jawa Timur (selain K
         galatUmum(data.galat.items ?? data.galat.umum ?? data.pesan ?? "Periksa lagi isian kamu.");
       } else if (res.status === 409 && data.masalah) {
         galatUmum(data.pesan, data.masalah.map((m: { pesan: string }) => m.pesan));
+      } else if (gagalKarenaServer(res.status)) {
+        // 5xx: server dianggap mati, alihkan ke WhatsApp
+        setServerMati(true);
+        galatUmum("Server sedang tidak tersedia. Tekan lagi untuk pesan lewat WhatsApp.");
       } else {
         galatUmum(data.pesan ?? data.message ?? "Pesanan belum bisa dibuat. Coba lagi sebentar.");
       }
     } catch {
-      galatUmum("Tidak bisa terhubung ke server. Coba lagi sebentar, atau pesan lewat WhatsApp.");
+      // jaringan / timeout: alihkan ke WhatsApp
+      setServerMati(true);
+      galatUmum("Server tidak bisa dihubungi. Tekan lagi untuk pesan lewat WhatsApp.");
     }
     tombolKirim.disabled = false;
-    tombolKirim.textContent = "Buat pesanan";
+    aturTombol();
   });
 
   window.addEventListener(EVENT_BERUBAH, render);

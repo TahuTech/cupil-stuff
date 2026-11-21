@@ -3,6 +3,7 @@
 // dan form permintaan servis (buka tiket).
 import Base from "../layouts/Base.astro";
 import Maskot from "../components/Maskot.astro";
+import BannerServer from "../components/BannerServer.astro";
 import { TOKO, SERVIS, linkWA } from "../config";
 import { ambilJasa, ambilPortofolio, ambilZonaOngkir } from "../lib/pb";
 import { LABEL_PERANGKAT } from "../lib/servis";
@@ -24,6 +25,7 @@ const aturan = [
 ];
 ---
 <Base judul="Servis mouse dan keyboard" deskripsi={`Servis mouse dan keyboard mechanical di ${TOKO.kota}. Cek gratis, bayar setelah selesai.`}>
+  <BannerServer />
   <section class="hero-servis">
     <div>
       <h1>Servis mouse &amp; keyboard</h1>
@@ -168,6 +170,7 @@ const aturan = [
       <div class="galat-umum" id="galat-umum" role="alert" hidden></div>
 
       <button type="submit" class="tombol utama" id="kirim">Buat tiket servis</button>
+      <p class="catatan-kirim" id="catatan-kirim">Nomor tiket dibuat otomatis. Kamu bisa memantau status di halaman cek tiket.</p>
     </form>
   </section>
 
@@ -190,6 +193,8 @@ const aturan = [
     type IsianServis, type PesananDibuatServis,
   } from "../lib/servis";
   import { linkWA, TOKO, SERVIS } from "../config";
+  import { deteksiAwal, fetchServer, gagalKarenaServer, aturBannerServer } from "../lib/status-server";
+  import { pesanServisWA } from "../lib/pesan-wa";
 
   const form = document.getElementById("servis") as HTMLFormElement;
   const galatUmum = document.getElementById("galat-umum") as HTMLElement;
@@ -197,6 +202,26 @@ const aturan = [
   const pratinjau = document.getElementById("pratinjau-foto") as HTMLElement;
   const inputFoto = document.getElementById("foto") as HTMLInputElement;
   const kolomProvinsi = document.getElementById("kolom-provinsi") as HTMLElement;
+  const catatanKirim = document.getElementById("catatan-kirim");
+  let serverMati = false;
+
+  function aturTombol() {
+    tombol.textContent = serverMati ? "Ajukan servis via WhatsApp" : "Buat tiket servis";
+    if (catatanKirim) {
+      catatanKirim.textContent = serverMati
+        ? "Pemesanan otomatis sedang tidak tersedia. Isian dikirim lewat WhatsApp; foto perangkat bisa dilampirkan di chat."
+        : "Nomor tiket dibuat otomatis. Kamu bisa memantau status di halaman cek tiket.";
+    }
+  }
+  function setServerMati(mati: boolean) {
+    serverMati = mati;
+    aturBannerServer(mati);
+    aturTombol();
+  }
+  deteksiAwal().then((status) => setServerMati(status === "mati"));
+  document.addEventListener("visibilitychange", () => {
+    if (!document.hidden) deteksiAwal().then((status) => setServerMati(status === "mati"));
+  });
 
   const nilai = (id: string) =>
     (document.getElementById(id) as HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement | null)?.value ?? "";
@@ -260,6 +285,16 @@ const aturan = [
     tombol.disabled = true;
     tombol.textContent = "Mengirim…";
     try {
+      // Mode WhatsApp: server mati → kirim isian lewat WA, foto tetap di form (tidak hilang).
+      if (serverMati) {
+        const pesan = pesanServisWA(data, fotoTerpilih().length, TOKO.nama);
+        const jendela = window.open(linkWA(pesan), "_blank", "noopener");
+        if (!jendela) tampilkanGalat({ umum: "Izinkan jendela baru untuk membuka WhatsApp, lalu tekan tombol lagi." });
+        tombol.disabled = false;
+        aturTombol();
+        return;
+      }
+
       const fd = new FormData();
       for (const [k, v] of Object.entries(data)) fd.set(k, v);
       for (const b of fotoTerpilih()) {
@@ -267,21 +302,26 @@ const aturan = [
         fd.append("foto", new File([kecil], b.name.replace(/\.\w+$/, "") + ".jpg", { type: "image/jpeg" }));
       }
 
-      const res = await fetch(urlServis(), { method: "POST", body: fd });
+      const res = await fetchServer(urlServis(), { method: "POST", body: fd });
       const balas = await res.json().catch(() => ({}));
       if (!res.ok) {
         if (res.status === 400 && balas.galat) tampilkanGalat({ ...balas.galat, umum: balas.galat.umum ?? balas.pesan });
         else if (res.status === 413) tampilkanGalat({ foto: "Foto terlalu besar. Kurangi jumlah atau ukuran foto." });
-        else tampilkanGalat({ umum: balas.pesan ?? "Tiket belum bisa dibuat. Coba lagi sebentar." });
+        else if (gagalKarenaServer(res.status)) {
+          setServerMati(true);
+          tampilkanGalat({ umum: "Server sedang tidak tersedia. Tekan lagi untuk mengirim lewat WhatsApp." });
+        } else tampilkanGalat({ umum: balas.pesan ?? "Tiket belum bisa dibuat. Coba lagi sebentar." });
         tombol.disabled = false;
-        tombol.textContent = "Buat tiket servis";
+        aturTombol();
         return;
       }
       tampilkanSukses(balas as PesananDibuatServis, data.cara_kirim);
     } catch {
-      tampilkanGalat({ umum: "Tidak bisa terhubung ke server. Coba lagi, atau hubungi kami lewat WhatsApp." });
+      // jaringan / timeout → alihkan ke WhatsApp
+      setServerMati(true);
+      tampilkanGalat({ umum: "Server tidak bisa dihubungi. Tekan lagi untuk mengirim lewat WhatsApp." });
       tombol.disabled = false;
-      tombol.textContent = "Buat tiket servis";
+      aturTombol();
     }
   });
 
@@ -368,6 +408,7 @@ const aturan = [
   .pilihan small { color: var(--muted); font-size: 0.82rem; }
 
   #kirim { justify-self: start; font: inherit; font-weight: 600; cursor: pointer; }
+  .catatan-kirim { margin: 8px 0 0; font-size: 0.82rem; color: var(--muted); }
   #kirim:disabled { opacity: 0.6; cursor: default; }
 
   .sukses { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 10px; padding: 32px 0; }

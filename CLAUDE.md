@@ -20,6 +20,8 @@ Subdomain: `<domain>` (katalog), `cdn.<domain>` (R2 publik), `api.<domain>` (Poc
 
 Prinsip arsitektur: **katalog, foto, dan 3D harus tetap bisa dibuka walaupun homelab mati.** Hanya pesanan baru, cek tiket, dan admin yang boleh bergantung ke homelab.
 
+Saat homelab mati, fitur yang butuh server **jatuh ke WhatsApp** (bukan error buntu): keranjang, servis, cek tiket, dan bayar menampilkan banner "Pemesanan otomatis sedang istirahat" lalu mengirim isian lewat WhatsApp. Deteksi lewat `web/src/lib/status-server.ts` (`GET /api/health`, timeout 3 detik, hasil disimpan 60 detik; juga dianggap mati bila request gagal karena jaringan/timeout/5xx — tapi **bukan** 4xx/429/galat validasi). Landing, katalog, dan halaman produk tidak menampilkan banner.
+
 ## Struktur repo
 
 ```

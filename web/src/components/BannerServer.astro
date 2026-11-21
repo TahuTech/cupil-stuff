@@ -1,0 +1,21 @@
+---
+// Banner kecil saat server (PocketBase) tidak bisa dihubungi. Hanya ditampilkan di halaman
+// yang terdampak (keranjang, servis, cek-tiket, bayar). Disembunyikan secara default;
+// halaman memunculkannya lewat id="banner-server" setelah cekServer() mengembalikan "mati".
+---
+<div class="banner-server" id="banner-server" role="status" aria-live="polite" hidden>
+  <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M12 9v4" /><path d="M12 17h.01" />
+    <path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z" />
+  </svg>
+  <span>Pemesanan otomatis sedang istirahat — pesan tetap bisa lewat WhatsApp.</span>
+</div>
+
+<style>
+  .banner-server {
+    display: flex; align-items: center; gap: 10px; margin: 0 0 16px; padding: 10px 14px;
+    background: #fff3cd; color: #7a5b00; border: 1px solid #f0d98a; border-radius: var(--radius);
+    font-size: 0.9rem; line-height: 1.35;
+  }
+  .banner-server svg { width: 20px; height: 20px; flex: none; }
+</style>

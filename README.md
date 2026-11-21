@@ -179,6 +179,17 @@ Setiap pesanan baru, pesanan yang ongkirnya perlu dikonfirmasi (di atas 5 kg ata
 
 Jika token atau chat id kosong, notifikasi dilewati tanpa galat. Jika Telegram sedang gangguan, pesanan dan tiket tetap tersimpan (pembeli menunggu paling lama sekitar 5 detik) dan kegagalannya tercatat di **Logs** panel admin. Jangan simpan token di repo.
 
+## Pemantauan server dari luar (disarankan)
+
+Notifikasi Telegram di atas **dikirim dari homelab**, jadi ikut mati saat homelab/PocketBase mati — justru saat kamu paling perlu tahu. Karena itu, pantau dari **luar**:
+
+- Daftar gratis di [UptimeRobot](https://uptimerobot.com) (atau layanan sejenis), buat monitor tipe **HTTP(s)** ke `https://api.<domain>/api/health`. Atur interval 5 menit.
+- `/api/health` adalah endpoint bawaan PocketBase (menjawab `{"code":200,...}` selama server hidup), jadi tidak perlu membuat route sendiri.
+- Aktifkan **alert contact** ke email (gratis) dan/atau **Telegram**: UptimeRobot punya integrasi Telegram bawaan (isi token bot + chat id yang sama seperti bagian sebelumnya). Dengan begitu kamu tetap dapat kabar walau homelab mati total.
+- Tambahkan monitor kedua ke `https://<domain>` (katalog) untuk memastikan situs statis tetap terbuka.
+
+Situs katalog memakai deteksi yang sama di browser: bila `/api/health` tidak menjawab dalam 3 detik, halaman keranjang, servis, cek tiket, dan bayar otomatis beralih ke pesan lewat WhatsApp (banner kecil "Pemesanan otomatis sedang istirahat"). Begitu server hidup lagi, halaman kembali normal tanpa reload.
+
 ## Jasa servis
 
 Alur customer:
@@ -218,7 +229,8 @@ Skrip menampilkan jumlah dan contoh nomor yang akan dihapus, lalu meminta kamu m
 - [x] Tahap 3: keranjang, ongkir per zona, checkout (`POST /api/checkout`, hitung ulang di server), QRIS nominal otomatis, pesanan tersimpan
 - [x] Tahap 4: konfirmasi bayar, stok otomatis, ongkir manual, link WA, halaman /bayar
 - [x] Tahap 5: halaman jasa servis, form + nomor tiket (`POST /api/servis`), cek status (`GET /api/tiket`), tagihan + ongkir kirim balik dihitung di server, QRIS, link WA pemilik
+- [x] Mode WhatsApp saat homelab mati: deteksi `/api/health` (timeout 3 detik, cache 60 detik), keranjang/servis/cek tiket/bayar beralih ke WhatsApp, banner di halaman terdampak
 
 ## Catatan
 
-Sudah dicek: migrasi berjalan di PocketBase 0.40.3 (6 zona ongkir terisi), `npm run check` 0 error, `npm test` lulus (158 test), dan `npm run build` berhasil (10 halaman). Route `/api/servis` dan `/api/tiket` diuji langsung dengan curl (validasi, foto, ongkir kirim balik, tagihan, respons tanpa data pribadi, pembatasan 5 kali salah per IP selama 15 menit), dan alur `/servis` → `/cek-tiket` diuji di browser pada 360, 393, dan 1280 px. Jika migrasi gagal, cek `docker compose logs pocketbase`.
+Sudah dicek: migrasi berjalan di PocketBase 0.40.3 (6 zona ongkir terisi), `npm run check` 0 error, `npm test` lulus (217 test, termasuk deteksi status server dan isi pesan WA), dan `npm run build` berhasil (10 halaman). Route `/api/servis` dan `/api/tiket` diuji langsung dengan curl (validasi, foto, ongkir kirim balik, tagihan, respons tanpa data pribadi, pembatasan 5 kali salah per IP selama 15 menit). Mode WhatsApp diuji dengan `docker compose stop pocketbase`: katalog dan halaman tetap terbuka, keranjang/servis/cek tiket/bayar menampilkan banner dan beralih ke WhatsApp; setelah `docker compose start pocketbase` semua kembali normal tanpa reload. Jika migrasi gagal, cek `docker compose logs pocketbase`.

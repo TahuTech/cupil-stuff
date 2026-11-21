@@ -2,9 +2,11 @@
 // Halaman /cek-tiket: masukkan nomor tiket + 4 digit terakhir WA untuk melihat status servis.
 import Base from "../layouts/Base.astro";
 import Maskot from "../components/Maskot.astro";
+import BannerServer from "../components/BannerServer.astro";
 import { TOKO } from "../config";
 ---
 <Base judul="Cek status tiket servis" deskripsi={`Cek status servis di ${TOKO.nama}.`}>
+  <BannerServer />
   <section class="cek" id="layar-masuk" hidden>
     <Maskot ukuran={100} />
     <h1>Cek status tiket</h1>
@@ -21,6 +23,7 @@ import { TOKO } from "../config";
       </label>
       <button type="submit" class="tombol utama" id="btn-cek">Cek tiket</button>
       <p class="galat" id="galat" hidden></p>
+      <p class="galat" id="galat-server" hidden></p>
     </form>
   </section>
 
@@ -52,6 +55,18 @@ import { TOKO } from "../config";
   import { urlTiket } from "../lib/servis";
   import { qrisDenganNominal } from "../lib/qris";
   import { encode, renderSVG } from "uqr";
+  import { deteksiAwal, fetchServer, gagalKarenaServer, aturBannerServer } from "../lib/status-server";
+  import { pesanCekTiketWA } from "../lib/pesan-wa";
+
+  let serverMati = false;
+  function setServerMati(mati: boolean) {
+    serverMati = mati;
+    aturBannerServer(mati);
+  }
+  deteksiAwal().then((status) => setServerMati(status === "mati"));
+  document.addEventListener("visibilitychange", () => {
+    if (!document.hidden) deteksiAwal().then((status) => setServerMati(status === "mati"));
+  });
 
   const QRIS_STATIS = (import.meta.env.PUBLIC_QRIS_STATIS || "").trim();
 
@@ -256,6 +271,15 @@ import { TOKO } from "../config";
     const wa4 = ($("wa4") as HTMLInputElement).value.trim();
     const btn = $("btn-cek") as HTMLButtonElement;
     const galat = $("galat");
+    const galatServer = $("galat-server");
+    galat.hidden = true;
+    galatServer.hidden = true;
+
+    // Server mati: pengecekan tidak tersedia, tawarkan WA berisi nomor tiket.
+    if (serverMati) {
+      tampilkanTidakTersedia(nomor);
+      return;
+    }
     if (!nomor || !/^\d{4}$/.test(wa4)) {
       galat.textContent = "Isi nomor tiket dan 4 digit terakhir WA.";
       galat.hidden = false;
@@ -263,9 +287,8 @@ import { TOKO } from "../config";
     }
     btn.disabled = true;
     btn.textContent = "Mengecek…";
-    galat.hidden = true;
     try {
-      const res = await fetch(`${urlTiket()}/${encodeURIComponent(nomor)}?wa=${wa4}`);
+      const res = await fetchServer(`${urlTiket()}/${encodeURIComponent(nomor)}?wa=${wa4}`);
       const data = await res.json().catch(() => ({}));
       if (res.ok) {
         renderTiket(data as DetailTiket);
@@ -273,18 +296,34 @@ import { TOKO } from "../config";
         $("judul-error").textContent = "Tiket tidak ditemukan";
         $("pesan-error").textContent = "Periksa kembali nomor tiketmu. Kalau baru membuat tiket, tunggu sebentar lalu coba lagi.";
         tampil("layar-error");
+      } else if (gagalKarenaServer(res.status)) {
+        setServerMati(true);
+        tampilkanTidakTersedia(nomor);
       } else {
         galat.textContent =
           res.status === 403 ? "4 digit terakhir tidak cocok." : data.pesan || "Gagal mengecek. Coba lagi nanti.";
         galat.hidden = false;
       }
     } catch {
-      galat.textContent = "Tidak bisa terhubung ke server. Coba lagi.";
-      galat.hidden = false;
+      setServerMati(true);
+      tampilkanTidakTersedia(nomor);
     }
     btn.disabled = false;
     btn.textContent = "Cek tiket";
   });
+
+  // Server mati: tampilkan pesan + tautan WA berisi nomor tiket yang diketik.
+  function tampilkanTidakTersedia(nomor: string) {
+    const galatServer = $("galat-server");
+    galatServer.replaceChildren(document.createTextNode("Pengecekan sedang tidak tersedia. "));
+    const a = document.createElement("a");
+    a.href = linkWA(pesanCekTiketWA(nomor, TOKO.nama));
+    a.target = "_blank";
+    a.rel = "noopener";
+    a.textContent = "Hubungi via WhatsApp";
+    galatServer.appendChild(a);
+    galatServer.hidden = false;
+  }
 
   $("btn-kembali").addEventListener("click", () => {
     tampil("layar-masuk");

@@ -191,7 +191,7 @@ Notifikasi Telegram di atas **dikirim dari homelab**, jadi ikut mati saat homela
 - Aktifkan **alert contact** ke email (gratis) dan/atau **Telegram**: UptimeRobot punya integrasi Telegram bawaan (isi token bot + chat id yang sama seperti bagian sebelumnya). Dengan begitu kamu tetap dapat kabar walau homelab mati total.
 - Tambahkan monitor kedua ke `https://<domain>` (katalog) untuk memastikan situs statis tetap terbuka.
 
-Situs katalog memakai deteksi yang sama di browser: bila `/api/health` tidak menjawab dalam 3 detik, halaman keranjang, servis, cek tiket, dan bayar otomatis beralih ke pesan lewat WhatsApp (banner kecil "Pemesanan otomatis sedang istirahat"). Begitu server hidup lagi, halaman kembali normal tanpa reload.
+Situs katalog memakai deteksi yang sama di browser: bila `/api/health` tidak menjawab dalam 3 detik, halaman keranjang, servis, cek tiket, dan bayar otomatis beralih ke pesan lewat WhatsApp (banner kecil "Pemesanan otomatis sedang istirahat"). Begitu server hidup lagi, halaman kembali normal sendiri dalam sekitar 15 detik, tanpa reload.
 
 ## Jasa servis
 
@@ -236,4 +236,4 @@ Skrip menampilkan jumlah dan contoh nomor yang akan dihapus, lalu meminta kamu m
 
 ## Catatan
 
-Sudah dicek: migrasi berjalan di PocketBase 0.40.3 (6 zona ongkir terisi), `npm run check` 0 error, `npm test` lulus (217 test, termasuk deteksi status server dan isi pesan WA), dan `npm run build` berhasil (10 halaman). Route `/api/servis` dan `/api/tiket` diuji langsung dengan curl (validasi, foto, ongkir kirim balik, tagihan, respons tanpa data pribadi, pembatasan 5 kali salah per IP selama 15 menit). Mode WhatsApp diuji dengan `docker compose stop pocketbase`: katalog dan halaman tetap terbuka, keranjang/servis/cek tiket/bayar menampilkan banner dan beralih ke WhatsApp; setelah `docker compose start pocketbase` semua kembali normal tanpa reload. Jika migrasi gagal, cek `docker compose logs pocketbase`.
+Sudah dicek: migrasi berjalan di PocketBase 0.40.3 (6 zona ongkir terisi), `npm run check` 0 error, `npm test` lulus (218 test, termasuk deteksi status server dan isi pesan WA), dan `npm run build` berhasil (10 halaman). Route `/api/servis` dan `/api/tiket` diuji langsung dengan curl (validasi, foto, ongkir kirim balik, tagihan, respons tanpa data pribadi, pembatasan 5 kali salah per IP selama 15 menit). Mode WhatsApp diuji dengan `docker compose stop pocketbase`: katalog dan halaman tetap terbuka, keranjang/servis/cek tiket/bayar menampilkan banner dan beralih ke WhatsApp; setelah `docker compose start pocketbase` semua kembali normal tanpa reload. Jika migrasi gagal, cek `docker compose logs pocketbase`.

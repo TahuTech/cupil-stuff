@@ -21,8 +21,9 @@ describe("status-server", () => {
     vi.restoreAllMocks();
   });
 
-  it("gagalKarenaServer: null (jaringan/timeout) dan 5xx dianggap mati; 4xx/429 bukan", () => {
-    return muatModul().then((m) => {
+  it("gagalKarenaServer: null (jaringan/timeout) dan 5xx dianggap mati; 4xx/429 bukan", async () => {
+    {
+      const m = await muatModul();
       expect(m.gagalKarenaServer(null)).toBe(true); // tidak ada respons
       expect(m.gagalKarenaServer(500)).toBe(true);
       expect(m.gagalKarenaServer(502)).toBe(true);
@@ -33,7 +34,7 @@ describe("status-server", () => {
       expect(m.gagalKarenaServer(409)).toBe(false); // stok habis
       expect(m.gagalKarenaServer(429)).toBe(false); // rate limit
       expect(m.gagalKarenaServer(200)).toBe(false);
-    });
+    }
   });
 
   it("cekServer: 200 → hidup", async () => {
@@ -122,5 +123,38 @@ describe("status-server", () => {
     m = await muatModul();
     await m.deteksiAwal();
     expect(banner.hidden).toBe(false); // server mati → banner tampil
+  });
+
+  it("pantauServer: saat mati dicek ulang tiap 15 detik tanpa cache, lalu kembali normal tanpa reload", async () => {
+    const banner = { hidden: true };
+    const tangkap: Record<string, () => void> = {};
+    vi.stubGlobal("document", {
+      hidden: false,
+      getElementById: (id: string) => (id === "banner-server" ? banner : null),
+      addEventListener: (n: string, f: () => void) => { tangkap[n] = f; },
+    });
+    let hidup = false;
+    const fetchTiruan = vi.fn(async () => {
+      if (!hidup) throw new TypeError("mati");
+      return new Response("{}", { status: 200 });
+    });
+    vi.stubGlobal("fetch", fetchTiruan);
+    const m = await muatModul();
+    const riwayat: boolean[] = [];
+    m.pantauServer((mati) => riwayat.push(mati));
+    await vi.advanceTimersByTimeAsync(10);
+    expect(riwayat).toEqual([true]); // awal: mati
+
+    await vi.advanceTimersByTimeAsync(m.JEDA_PANTAU_MS);
+    expect(riwayat).toEqual([true, true]); // masih mati: dicek lagi (bukan dari cache)
+    expect(fetchTiruan).toHaveBeenCalledTimes(2);
+
+    hidup = true; // server hidup lagi
+    await vi.advanceTimersByTimeAsync(m.JEDA_PANTAU_MS);
+    expect(riwayat[riwayat.length - 1]).toBe(false);
+
+    const n = fetchTiruan.mock.calls.length;
+    await vi.advanceTimersByTimeAsync(m.JEDA_PANTAU_MS * 3);
+    expect(fetchTiruan.mock.calls.length).toBe(n); // sudah hidup: tidak menembak terus-menerus
   });
 });

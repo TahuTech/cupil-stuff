@@ -1,7 +1,6 @@
 // Deteksi apakah server (PocketBase di homelab) bisa dihubungi.
 // Katalog statis tetap jalan tanpa server; yang dialihkan hanya fitur yang butuh server
 // (checkout, servis, cek tiket, cek pesanan) → jatuh ke WhatsApp.
-// Logika murni (tanpa fetch) ada di status-server-pesan.ts agar bisa diuji.
 
 import { urlApi } from "./api";
 
@@ -89,4 +88,22 @@ export async function deteksiAwal(paksa = false): Promise<StatusServer> {
   const status = await cekServer(paksa);
   aturBannerServer(status === "mati");
   return status;
+}
+
+export const JEDA_PANTAU_MS = 15_000;
+
+/**
+ * Pantau server untuk sebuah halaman: cek saat dimuat, saat tab aktif lagi, dan — selama
+ * server mati — setiap 15 detik (tanpa memakai hasil tersimpan), supaya halaman kembali normal
+ * begitu server hidup lagi tanpa reload. `saatUbah` dipanggil dengan true bila mati.
+ */
+export function pantauServer(saatUbah: (mati: boolean) => void) {
+  const terapkan = (status: StatusServer) => saatUbah(status === "mati");
+  deteksiAwal().then(terapkan);
+  document.addEventListener("visibilitychange", () => {
+    if (!document.hidden) deteksiAwal(hasilTerakhir.status === "mati").then(terapkan);
+  });
+  setInterval(() => {
+    if (hasilTerakhir.status === "mati" && !document.hidden) deteksiAwal(true).then(terapkan);
+  }, JEDA_PANTAU_MS);
 }

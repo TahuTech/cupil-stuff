@@ -193,7 +193,7 @@ const aturan = [
     type IsianServis, type PesananDibuatServis,
   } from "../lib/servis";
   import { linkWA, TOKO, SERVIS } from "../config";
-  import { deteksiAwal, fetchServer, gagalKarenaServer, aturBannerServer } from "../lib/status-server";
+  import { pantauServer, fetchServer, gagalKarenaServer, aturBannerServer } from "../lib/status-server";
   import { pesanServisWA } from "../lib/pesan-wa";
 
   const form = document.getElementById("servis") as HTMLFormElement;
@@ -218,10 +218,7 @@ const aturan = [
     aturBannerServer(mati);
     aturTombol();
   }
-  deteksiAwal().then((status) => setServerMati(status === "mati"));
-  document.addEventListener("visibilitychange", () => {
-    if (!document.hidden) deteksiAwal().then((status) => setServerMati(status === "mati"));
-  });
+  pantauServer(setServerMati);
 
   const nilai = (id: string) =>
     (document.getElementById(id) as HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement | null)?.value ?? "";

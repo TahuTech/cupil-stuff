@@ -223,7 +223,7 @@ const labelProvinsi = (p: string) => (p === "Jawa Timur" ? "Jawa Timur (selain K
   // ---------- checkout ----------
   import { validasiIsian, urlCheckout, KUNCI_PESANAN, type IsianCheckout, type PesananDibuat } from "../lib/checkout";
   import { kosongkanKeranjang } from "../lib/keranjang";
-  import { deteksiAwal, fetchServer, gagalKarenaServer, aturBannerServer } from "../lib/status-server";
+  import { pantauServer, fetchServer, gagalKarenaServer, aturBannerServer } from "../lib/status-server";
   import { pesanKeranjangWA, type OngkirWA } from "../lib/pesan-wa";
   import { linkWA, TOKO } from "../config";
   const form = $("form-checkout") as HTMLFormElement;
@@ -250,11 +250,7 @@ const labelProvinsi = (p: string) => (p === "Jawa Timur" ? "Jawa Timur (selain K
   }
 
   // deteksi awal (60 detik cache); bila server hidup lagi, tombol kembali normal tanpa reload
-  deteksiAwal().then((status) => setServerMati(status === "mati"));
-  // saat tab kembali aktif, cek lagi (mis. homelab baru dinyalakan)
-  document.addEventListener("visibilitychange", () => {
-    if (!document.hidden) deteksiAwal().then((status) => setServerMati(status === "mati"));
-  });
+  pantauServer(setServerMati);
 
   window.addEventListener("keranjang:ringkasan", (e) => {
     siapCheckout = (e as CustomEvent<ReturnType<typeof ringkasKeranjang>>).detail;

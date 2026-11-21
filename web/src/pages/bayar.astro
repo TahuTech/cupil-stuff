@@ -45,7 +45,7 @@ import { qrisDenganNominal } from "../lib/qris";
 import { renderSVG } from "uqr";
 import { urlApi } from "../lib/api";
 import { linkLacakJNT } from "../lib/lacak";
-import { deteksiAwal, fetchServer, gagalKarenaServer, aturBannerServer } from "../lib/status-server";
+import { pantauServer, cekServer, fetchServer, gagalKarenaServer, aturBannerServer } from "../lib/status-server";
 import { pesanCekPesananWA } from "../lib/pesan-wa";
 
 let serverMati = false;
@@ -53,10 +53,7 @@ function setServerMati(mati: boolean) {
   serverMati = mati;
   aturBannerServer(mati);
 }
-deteksiAwal().then((status) => setServerMati(status === "mati"));
-document.addEventListener("visibilitychange", () => {
-  if (!document.hidden) deteksiAwal().then((status) => setServerMati(status === "mati"));
-});
+  pantauServer(setServerMati);
 
 const QRIS = (import.meta.env.PUBLIC_QRIS_STATIS || "").trim();
 
@@ -183,6 +180,8 @@ $("form-masuk").addEventListener("submit", async (e) => {
   galatServer.hidden = true;
 
   // Server mati: pengecekan tidak tersedia, tawarkan WA berisi nomor pesanan.
+  // cek ulang tanpa cache: bisa jadi server sudah hidup lagi
+  if (serverMati && (await cekServer(true)) !== "mati") setServerMati(false);
   if (serverMati) {
     tampilkanTidakTersedia(nomor);
     return;

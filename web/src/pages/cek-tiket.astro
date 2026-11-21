@@ -55,7 +55,7 @@ import { TOKO } from "../config";
   import { urlTiket } from "../lib/servis";
   import { qrisDenganNominal } from "../lib/qris";
   import { encode, renderSVG } from "uqr";
-  import { deteksiAwal, fetchServer, gagalKarenaServer, aturBannerServer } from "../lib/status-server";
+  import { pantauServer, cekServer, fetchServer, gagalKarenaServer, aturBannerServer } from "../lib/status-server";
   import { pesanCekTiketWA } from "../lib/pesan-wa";
 
   let serverMati = false;
@@ -63,10 +63,7 @@ import { TOKO } from "../config";
     serverMati = mati;
     aturBannerServer(mati);
   }
-  deteksiAwal().then((status) => setServerMati(status === "mati"));
-  document.addEventListener("visibilitychange", () => {
-    if (!document.hidden) deteksiAwal().then((status) => setServerMati(status === "mati"));
-  });
+  pantauServer(setServerMati);
 
   const QRIS_STATIS = (import.meta.env.PUBLIC_QRIS_STATIS || "").trim();
 
@@ -276,6 +273,8 @@ import { TOKO } from "../config";
     galatServer.hidden = true;
 
     // Server mati: pengecekan tidak tersedia, tawarkan WA berisi nomor tiket.
+    // cek ulang tanpa cache: bisa jadi server sudah hidup lagi
+    if (serverMati && (await cekServer(true)) !== "mati") setServerMati(false);
     if (serverMati) {
       tampilkanTidakTersedia(nomor);
       return;

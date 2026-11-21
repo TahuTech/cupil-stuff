@@ -1,0 +1,247 @@
+---
+// Halaman /cek-tiket: masukkan nomor tiket + 4 digit terakhir WA untuk melihat status servis.
+import Base from "../layouts/Base.astro";
+import Maskot from "../components/Maskot.astro";
+import { TOKO, linkWA } from "../config";
+---
+<Base judul="Cek status tiket servis" deskripsi={`Cek status servis di ${TOKO.nama}.`}>
+  <section class="cek" id="layar-masuk" hidden>
+    <Maskot ukuran={100} />
+    <h1>Cek status tiket</h1>
+    <p class="info">Masukkan nomor tiket servis dan 4 digit terakhir nomor WhatsApp kamu.</p>
+    <form id="form-cek" class="form" autocomplete="off">
+      <label>
+        <span>Nomor tiket</span>
+        <input type="text" id="nomor" placeholder="SRV-260101-ABCD" required maxlength={20} />
+      </label>
+      <label>
+        <span>4 digit terakhir WA</span>
+        <input type="text" id="wa4" inputmode="numeric" pattern="\d{4}" maxlength={4}
+               placeholder="1234" required autocomplete="off" />
+      </label>
+      <button type="submit" class="tombol utama" id="btn-cek">Cek tiket</button>
+      <p class="galat" id="galat" hidden></p>
+    </form>
+  </section>
+
+  <section class="cek" id="layar-tiket" hidden>
+    <Maskot ukuran={110} senangSaatMuncul />
+    <h1 id="judul-tiket"></h1>
+    <p class="nomor">Tiket <b id="nomor-tiket"></b></p>
+
+    <div class="kotak">
+      <dl id="detail"></dl>
+    </div>
+
+    <div class="kotak" id="bagian-biaya" hidden></div>
+  </section>
+
+  <section class="cek" id="layar-error" hidden>
+    <Maskot ukuran={100} />
+    <h1 id="judul-error"></h1>
+    <p id="pesan-error" class="info"></p>
+    <button class="tombol utama" id="btn-kembali">Cek tiket lain</button>
+  </section>
+</Base>
+
+<script>
+  import { rupiah } from "../lib/format";
+  import { linkWA, TOKO } from "../config";
+  import { urlTiket } from "../lib/servis";
+  import { qrisDenganNominal } from "../lib/qris";
+  import { encode, renderSVG } from "uqr";
+
+  const QRIS_STATIS = (import.meta.env.PUBLIC_QRIS_STATIS || "").trim();
+
+  type DetailTiket = {
+    nomor: string;
+    status: string;
+    status_label: string;
+    jasa: { kode: string; nama: string } | null;
+    perangkat: string;
+    cara_kirim: string;
+    estimasi_biaya: number | null;
+    biaya_final: number | null;
+    ongkir_kirim_balik: number | null;
+    dibuat: string;
+    diperbarui: string;
+  };
+
+  const $ = (id: string) => document.getElementById(id)!;
+  function el<K extends keyof HTMLElementTagNameMap>(tag: K, cls?: string, txt?: string) {
+    const e = document.createElement(tag);
+    if (cls) e.className = cls;
+    if (txt) e.textContent = txt;
+    return e;
+  }
+  function tampil(id: string) {
+    ["layar-masuk", "layar-tiket", "layar-error"].forEach((x) => $(x).hidden = x !== id);
+  }
+  function tanggal(iso: string) {
+    if (!iso) return "–";
+    return new Date(iso).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" });
+  }
+  function tautanWA(teks: string, pesan: string) {
+    const a = el("a", "tombol wa", teks);
+    a.href = linkWA(pesan);
+    a.target = "_blank";
+    a.rel = "noopener";
+    return a;
+  }
+
+  function renderTiket(tk: DetailTiket) {
+    $("judul-tiket").textContent = "Tiket " + tk.nomor;
+    $("nomor-tiket").textContent = tk.nomor;
+
+    const baris: [string, string][] = [];
+    if (tk.jasa) baris.push(["Jenis servis", tk.jasa.nama + " (" + tk.jasa.kode + ")"]);
+    baris.push(
+      ["Status", tk.status_label || tk.status],
+      ["Perangkat", tk.perangkat || "–"],
+      ["Cara kirim", tk.cara_kirim === "antar" ? "Antar langsung" : "Lewat kurir"],
+      ["Dibuat", tanggal(tk.dibuat)],
+      ["Terakhir diperbarui", tanggal(tk.diperbarui)],
+    );
+
+    $("detail").replaceChildren(
+      ...baris.map(([dt, dd]) => {
+        const div = document.createElement("div");
+        const t = document.createElement("dt"); t.textContent = dt;
+        const d = document.createElement("dd"); d.textContent = dd;
+        div.append(t, d);
+        return div;
+      }),
+    );
+
+    const biaya = $("bagian-biaya");
+    biaya.replaceChildren();
+    biaya.hidden = true;
+
+    if (tk.status === "menunggu_persetujuan") {
+      biaya.hidden = false;
+      biaya.append(el("h2", "", "Estimasi biaya"));
+      if (tk.estimasi_biaya) biaya.append(el("p", "nominal", rupiah(tk.estimasi_biaya)));
+      biaya.append(el("p", "info", "Mohon konfirmasi setuju atau tidak lewat WhatsApp sebelum kami kerjakan."));
+      const est = tk.estimasi_biaya ? rupiah(tk.estimasi_biaya) : "";
+      biaya.append(tautanWA("Setuju, kerjakan", "Halo " + TOKO.nama + ", untuk tiket " + tk.nomor + ": saya setuju dengan estimasi " + est + ". Lanjutkan."));
+      biaya.append(tautanWA("Tidak, kembalikan perangkat", "Halo " + TOKO.nama + ", untuk tiket " + tk.nomor + ": saya tidak setuju dengan estimasi. Mohon kembalikan perangkat."));
+    }
+
+    if (tk.status === "selesai") {
+      biaya.hidden = false;
+      biaya.append(el("h2", "", "Biaya servis"));
+      const total = tk.biaya_final || tk.estimasi_biaya || 0;
+      if (total > 0) {
+        biaya.append(el("p", "nominal", rupiah(total)));
+        let qris = "";
+        try { qris = QRIS_STATIS ? qrisDenganNominal(QRIS_STATIS, total) : ""; } catch {}
+        if (qris) {
+          const qr = el("div", "qr");
+          qr.innerHTML = renderSVG(encode(qris, { ecc: "M", border: 4 }));
+          biaya.append(qr);
+        }
+        biaya.append(el("p", "info", "Bayar sesuai nominal di atas, lalu kirim bukti bayar lewat WhatsApp."));
+        biaya.append(tautanWA("Kirim bukti bayar via WhatsApp", "Halo " + TOKO.nama + ", saya sudah membayar servis tiket " + tk.nomor + " sebesar " + rupiah(total) + ". Bukti terlampir."));
+      } else {
+        biaya.append(el("p", "info", "Biaya akhir akan dikabari lewat WhatsApp."));
+      }
+    }
+
+    if (tk.status === "dikembalikan") {
+      biaya.hidden = false;
+      biaya.append(el("h2", "", "Ongkir kirim balik"));
+      if (tk.ongkir_kirim_balik) {
+        biaya.append(el("p", "nominal", rupiah(tk.ongkir_kirim_balik)));
+        biaya.append(el("p", "info", "Karena perangkat dikembalikan, kamu hanya menanggung ongkir kirim balik."));
+      } else {
+        biaya.append(el("p", "info", "Ongkir kirim balik akan dikabari lewat WhatsApp."));
+      }
+    }
+
+    tampil("layar-tiket");
+  }
+
+  const params = new URLSearchParams(location.search);
+  const nomorUrl = params.get("nomor");
+  if (nomorUrl) {
+    ($("nomor") as HTMLInputElement).value = nomorUrl;
+    ($("wa4") as HTMLInputElement).focus();
+  }
+
+  $("form-cek").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const nomor = ($("nomor") as HTMLInputElement).value.trim();
+    const wa4 = ($("wa4") as HTMLInputElement).value.trim();
+    const btn = $("btn-cek") as HTMLButtonElement;
+    const galat = $("galat");
+    if (!nomor || !/^\d{4}$/.test(wa4)) {
+      galat.textContent = "Isi nomor tiket dan 4 digit terakhir WA.";
+      galat.hidden = false;
+      return;
+    }
+    btn.disabled = true;
+    btn.textContent = "Mengecek…";
+    galat.hidden = true;
+    try {
+      const res = await fetch(`${urlTiket()}/${encodeURIComponent(nomor)}?wa=${wa4}`);
+      const data = await res.json();
+      if (!res.ok) {
+        if (res.status === 429) galat.textContent = data.pesan || "Terlalu banyak percobaan. Tunggu beberapa menit.";
+        else if (res.status === 403) galat.textContent = "4 digit terakhir tidak cocok.";
+        else if (res.status === 404) {
+          $("judul-error").textContent = "Tiket tidak ditemukan";
+          $("pesan-error").textContent = "Periksa kembali nomor tiketmu. Kalau baru membuat tiket, tunggu sebentar lalu coba lagi.";
+          tampil("layar-error");
+          btn.disabled = false; btn.textContent = "Cek tiket";
+          return;
+        } else galat.textContent = data.pesan || "Gagal mengecek. Coba lagi nanti.";
+        galat.hidden = false;
+        btn.disabled = false; btn.textContent = "Cek tiket";
+        return;
+      }
+      renderTiket(data as DetailTiket);
+    } catch {
+      galat.textContent = "Tidak bisa terhubung ke server. Coba lagi.";
+      galat.hidden = false;
+    }
+    btn.disabled = false;
+    btn.textContent = "Cek tiket";
+  });
+
+  $("btn-kembali").addEventListener("click", () => {
+    tampil("layar-masuk");
+    ($("nomor") as HTMLInputElement).value = "";
+    ($("wa4") as HTMLInputElement).value = "";
+  });
+
+  tampil("layar-masuk");
+</script>
+
+<style>
+  .cek { display: flex; flex-direction: column; align-items: center; text-align: center; padding: 16px 0; }
+  h1 { margin: 12px 0 4px; font-size: 1.4rem; }
+  .info { margin: 0 0 16px; color: var(--muted); max-width: 42ch; }
+  .nomor { margin: 0 0 8px; color: var(--muted); }
+  .nomor b { color: var(--text); font-size: 1.1rem; letter-spacing: 0.03em; }
+  .form { width: 100%; max-width: 360px; display: grid; gap: 10px; }
+  .form label { display: grid; gap: 4px; text-align: left; }
+  .form label span { font-weight: 600; font-size: 0.85rem; }
+  .form input { font: inherit; padding: 10px 12px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--card); }
+  .form input:focus { border-color: var(--primary); outline: none; box-shadow: 0 0 0 3px var(--primary-alpha); }
+  #wa4 { text-align: center; font-size: 1.4rem; letter-spacing: 0.3em; max-width: 120px; justify-self: center; }
+  .galat { color: #d32f2f; font-size: 0.85rem; margin: 0; }
+  .kotak { width: 100%; max-width: 480px; margin-top: 12px; padding: 16px 18px; text-align: left; background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); }
+  .kotak h2 { margin: 0 0 10px; font-size: 1rem; }
+  #detail { margin: 0; display: grid; gap: 8px; }
+  #detail :global(div) { display: flex; justify-content: space-between; gap: 12px; }
+  #detail :global(dt) { color: var(--muted); }
+  #detail :global(dd) { margin: 0; font-weight: 600; text-align: right; }
+  #bagian-biaya { display: flex; flex-direction: column; gap: 10px; }
+  #bagian-biaya :global(.nominal) { margin: 0; font-size: 1.5rem; font-weight: 800; }
+  #bagian-biaya :global(.info) { margin: 0; color: var(--muted); }
+  #bagian-biaya :global(.qr) { align-self: center; width: min(260px, 100%); background: #fff; border-radius: 12px; padding: 8px; border: 1px solid var(--line); }
+  #bagian-biaya :global(.qr svg) { display: block; width: 100%; height: auto; }
+  #btn-kembali { margin-top: 16px; }
+  @media (max-width: 480px) { h1 { font-size: 1.25rem; } }
+</style>
+

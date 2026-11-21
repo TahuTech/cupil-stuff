@@ -189,4 +189,31 @@ const edc2 = await buat("produk", form({ kode: "EDC-002", nama: "Peluit Darurat 
 const ve2 = await buat("varian", { produk: edc2.id, nama: "Standar", harga: 35000, berat_kirim: 100, stok: 10 });
 console.log(`EDC-002: aktif = false, varian ${ve2.kode}`);
 
+// ---------- Jasa servis + portofolio (tahap 5) ----------
+for (const j of await cari("jasa", `kode ~ "SRV-00"`)) await hapus("jasa", j.id);
+for (const p of await cari("portofolio", `judul ~ "Contoh"`)) await hapus("portofolio", p.id);
+
+const jasaContoh = [
+  ["SRV-001", "Ganti switch mouse", "mouse", 50000, "2–3 hari", "Switch double-click diganti switch baru. Cocok untuk mouse gaming maupun kantor."],
+  ["SRV-002", "Servis scroll encoder mouse", "mouse", 35000, "1–2 hari", "Scroll lompat atau tidak responsif diperbaiki dengan ganti encoder."],
+  ["SRV-003", "Ganti switch keyboard", "keyboard", 75000, "3–5 hari", "Ganti switch mati/berat. Bisa pilih tipe switch (linear/tactile)."],
+];
+for (let i = 0; i < jasaContoh.length; i++) {
+  const [kode, nama, perangkat, harga, estimasi, deskripsi] = jasaContoh[i];
+  await buat("jasa", {
+    kode, nama, perangkat, harga_mulai: harga, estimasi, aktif: true, urutan: i + 1,
+    deskripsi: `<p>${deskripsi} <em>Data contoh.</em></p>`,
+  });
+}
+console.log(`Jasa: ${jasaContoh.map((j) => j[0]).join(", ")}`);
+
+await buat(
+  "portofolio",
+  form(
+    { judul: "Contoh: Ganti switch mouse gaming", keterangan: "Double-click di switch kiri, sudah diganti switch baru.", urutan: 1 },
+    { foto_sebelum: [foto("sebelum.png", "#8d6e63")], foto_sesudah: [foto("sesudah.png", "#26a69a")] },
+  ),
+);
+console.log("Portofolio: 1 contoh (sebelum/sesudah)");
+
 console.log("Selesai.");

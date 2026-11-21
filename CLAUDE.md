@@ -40,12 +40,13 @@ web/                        proyek Astro
 | `/keranjang` | Keranjang (localStorage: id varian, jumlah, warna), ongkir per provinsi, form checkout |
 | `/pesanan-berhasil` | Hasil checkout: maskot senang, nomor, rincian dari server, QRIS bernominal (kecuali ongkir perlu konfirmasi), tombol kirim bukti bayar |
 | `/bayar` | Halaman cek dan bayar pesanan: masukkan nomor pesanan + 4 digit terakhir WA, tampil rincian + QRIS bernominal (atau resi jika sudah dikirim) |
-| `/servis` | Jasa servis (placeholder "segera hadir" sampai tahap 5) |
+| `/servis` | Jasa servis: daftar jasa, portofolio sebelum/sesudah, aturan (tanpa DP, bayar setelah selesai, cek gratis, tolak estimasi hanya bayar ongkir kirim balik, boleh antar langsung), form permintaan servis (buka tiket) |
+| `/cek-tiket` | Cek status tiket servis: masukkan nomor tiket + 4 digit terakhir WA, tampil status + estimasi/biaya + QRIS saat selesai |
 | `/404` | Halaman tidak ditemukan dengan maskot |
 
 Link "kembali ke katalog" selalu ke `/katalog`, bukan `/`.
 
-Build memakai `build.format: "file"` (`/katalog` → `katalog.html`). Route API khusus: `POST /api/checkout` (`pb_hooks/checkout.pb.js`), `GET /api/pesanan/{nomor}?wa=XXXX` (`pb_hooks/pesanan.api.pb.js`); CORS diatur lewat `PB_ORIGINS` (flag `--origins` di compose).
+Build memakai `build.format: "file"` (`/katalog` → `katalog.html`). Route API khusus: `POST /api/checkout` (`pb_hooks/checkout.pb.js`), `GET /api/pesanan/{nomor}?wa=XXXX` (`pb_hooks/pesanan.api.pb.js`), `POST /api/servis` (`pb_hooks/servis.pb.js`), `GET /api/tiket/{nomor}?wa=XXXX` (`pb_hooks/tiket.pb.js`); CORS diatur lewat `PB_ORIGINS` (flag `--origins` di compose).
 
 ## Data (koleksi PocketBase)
 
@@ -53,9 +54,9 @@ Build memakai `build.format: "file"` (`/katalog` → `katalog.html`). Route API 
 - `produk`: kode unik (`MDL-001`, `EDC-001`), nama, lini (`model3d` | `edc`), kategori, deskripsi (editor), foto[], model_3d (.glb, opsional), warna (JSON `[{nama, hex|null}]`), bagian_warna (JSON nama material), link_marketplace, aktif, unggulan (bool; tampil di "Produk pilihan" landing page, maks. 4, jika tidak ada pakai 4 produk terbaru)
 - `varian`: produk, kode unik (otomatis `<kode produk>-<n>` jika kosong), nama, harga, berat_kirim (gram), stok, preorder, foto[], urutan. **Setiap produk minimal punya 1 varian.** Harga, berat, dan stok selalu ada di varian.
 - `zona_ongkir`: nama, provinsi (JSON), tarif_per_kg, estimasi, urutan
-- `pesanan`: nomor (`CS-YYMMDD-XXXX`), items (JSON), pembeli, wa (`628…`), alamat, provinsi, zona, berat_gram, berat_ditagih_kg, subtotal, ongkir, potongan_ongkir, total, ongkir_konfirmasi (bool: di atas 5 kg atau zona tidak ditemukan; total = subtotal dan QRIS tidak ditampilkan), status_bayar (`menunggu` | `lunas` | `batal`), status_kirim, resi
+- `pesanan`: nomor (`CS-YYMMDD-XXXX`), items (JSON), pembeli, wa (`628…`), alamat, provinsi, zona, berat_gram, berat_ditagih_kg, subtotal, ongkir, potongan_ongkir, total, ongkir_konfirmasi (bool: di atas 5 kg atau zona tidak ditemukan; total = subtotal dan QRIS tidak ditampilkan), status_bayar (`menunggu` | `lunas` | `batal`), status_kirim, resi, link_wa_ongkir, link_wa_lunas, link_wa_resi (URL wa.me terisi otomatis oleh hook)
 - `jasa`: kode (`SRV-001`), nama, perangkat, deskripsi, harga_mulai, estimasi, aktif
-- `tiket_servis`: nomor, jasa, nama, wa, perangkat, keluhan, foto[], cara_kirim (`kurir` | `antar`), estimasi_biaya, biaya_final, status
+- `tiket_servis`: nomor (`SRV-YYMMDD-XXXX`), jasa, nama, wa, perangkat, keluhan, foto[] (maks 5, dikecilkan di browser), cara_kirim (`kurir` | `antar`), provinsi (tujuan kirim balik), estimasi_biaya, biaya_final, ongkir_kirim_balik, status (`menunggu_perangkat` | `diterima` | `dicek` | `menunggu_persetujuan` | `dikerjakan` | `selesai` | `dikirim` | `dikembalikan`)
 - `portofolio`: judul, foto_sebelum, foto_sesudah, keterangan
 
 Aturan akses: katalog publik bisa dibaca (hanya `aktif = true`). `pesanan` dan `tiket_servis` **tidak boleh** dibuat lewat API koleksi biasa. Keduanya dibuat lewat route khusus di `pb_hooks` yang menghitung harga dan ongkir di server, karena isian dari browser tidak bisa dipercaya.
@@ -88,7 +89,9 @@ Stok EDC dipakai bersama dengan marketplace dan diperbarui manual oleh pemilik. 
 - Tanpa DP: dibayar penuh setelah servis selesai.
 - Pengecekan gratis. Jika customer menolak estimasi, perangkat dikembalikan dan customer hanya membayar ongkir kirim balik.
 - Perangkat boleh dikirim lewat kurir atau diantar langsung.
-- Ongkir kirim balik memakai tabel zona yang sama.
+- Ongkir kirim balik memakai tabel zona yang sama; berat bawaan per jenis perangkat diatur di `web/src/config.ts` (`SERVIS.beratPerangkat`), alamat kirim di `SERVIS.alamatKirim`.
+- Alur status tiket: `menunggu_perangkat` (tiket dibuat) → `diterima` → `dicek` → `menunggu_persetujuan` (estimasi diisi pemilik) → `dikerjakan` → `selesai` (biaya final + QRIS) → `dikirim`. Jika ditolak: `dikembalikan` (+ ongkir kirim balik).
+- Halaman `/cek-tiket` menampilkan estimasi saat `menunggu_persetujuan`, biaya final + QRIS bernominal saat `selesai`, dan ongkir kirim balik saat `dikembalikan`.
 
 ## Konvensi
 

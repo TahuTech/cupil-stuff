@@ -1,22 +1,408 @@
 ---
-// Placeholder. Isi lengkap (daftar jasa, form, tiket) dikerjakan di tahap 5.
+// Halaman jasa servis: daftar jasa, portofolio sebelum/sesudah, aturan,
+// dan form permintaan servis (buka tiket).
 import Base from "../layouts/Base.astro";
 import Maskot from "../components/Maskot.astro";
 import { TOKO, linkWA } from "../config";
+import { ambilJasa, ambilPortofolio } from "../lib/pb";
+import { rupiah, teksPolos } from "../lib/format";
+
+const [jasa, portofolio] = await Promise.all([ambilJasa(), ambilPortofolio()]);
+
+const aturan = [
+  { judul: "Tanpa DP", isi: "Perangkat boleh dikirim dulu. Tidak perlu membayar di awal." },
+  { judul: "Bayar setelah selesai", isi: "Biaya dibayar penuh setelah servis selesai dan kamu setuju." },
+  { judul: "Pengecekan gratis", isi: "Tidak ada biaya untuk membuka dan mengecek perangkat." },
+  { judul: "Tolak estimasi? Beres.", isi: "Kalau tidak cocok dengan estimasi, perangkat dikirim balik. Kamu hanya menanggung ongkir kirim balik." },
+  { judul: "Boleh antar langsung", isi: `Langsung antar ke ${TOKO.kota} tanpa biaya kirim.` },
+];
 ---
-<Base judul="Servis mouse dan keyboard" deskripsi={`Servis mouse dan keyboard mechanical di ${TOKO.kota}.`}>
-  <section class="segera">
-    <Maskot ukuran={140} />
-    <h1>Servis mouse dan keyboard</h1>
-    <p>Halaman ini segera hadir. Sementara itu, tanya dulu lewat WhatsApp, ya.</p>
-    <a class="tombol wa" href={linkWA(`Halo ${TOKO.nama}, saya mau tanya soal servis mouse/keyboard.`)} target="_blank" rel="noopener">
-      Tanya via WhatsApp
-    </a>
+<Base judul="Servis mouse dan keyboard" deskripsi={`Servis mouse dan keyboard mechanical di ${TOKO.kota}. Cek gratis, bayar setelah selesai.`}>
+  <section class="hero-servis">
+    <div>
+      <h1>Servis mouse &amp; keyboard</h1>
+      <p class="lead">Double-click, scroll lompat, tombol macet, switch mati? Kami cek gratis dan kabari estimasi sebelum dikerjakan.</p>
+      <div class="aksi">
+        <a class="tombol utama" href="#form-servis">Ajukan servis</a>
+        <a class="tombol wa" href={linkWA(`Halo ${TOKO.nama}, saya mau tanya soal servis.`)} target="_blank" rel="noopener">Tanya dulu via WhatsApp</a>
+      </div>
+    </div>
+    <Maskot ukuran={130} />
+  </section>
+
+  <section class="aturan" aria-labelledby="judul-aturan">
+    <h2 id="judul-aturan">Cara kerjanya</h2>
+    <ul>
+      {aturan.map((a) => (
+        <li>
+          <b>{a.judul}</b>
+          <span>{a.isi}</span>
+        </li>
+      ))}
+    </ul>
+  </section>
+
+  {jasa.length > 0 && (
+    <section class="jasa" aria-labelledby="judul-jasa">
+      <h2 id="judul-jasa">Jenis servis</h2>
+      <div class="grid-jasa">
+        {jasa.map((j) => (
+          <article class="kartu-jasa">
+            <span class="kode">{j.kode}</span>
+            <h3>{j.nama}</h3>
+            {j.deskripsi && <p class="deskripsi" set:html={j.deskripsi} />}
+            <p class="harga-mulai">Mulai {rupiah(j.hargaMulai)}</p>
+            {j.estimasi && <p class="estimasi">Estimasi {j.estimasi}</p>}
+          </article>
+        ))}
+      </div>
+    </section>
+  )}
+
+  {portofolio.length > 0 && (
+    <section class="portofolio" aria-labelledby="judul-portofolio">
+      <h2 id="judul-portofolio">Sebelum &amp; sesudah</h2>
+      <div class="grid-portofolio">
+        {portofolio.map((p) => (
+          <figure class="kartu-portofolio">
+            <div class="pasangan">
+              {p.fotoSebelum ? <img src={p.fotoSebelum} alt={`Sebelum: ${p.judul}`} loading="lazy" /> : <div class="kosong">sebelum</div>}
+              {p.fotoSesudah ? <img src={p.fotoSesudah} alt={`Sesudah: ${p.judul}`} loading="lazy" /> : <div class="kosong">sesudah</div>}
+            </div>
+            <figcaption>
+              <b>{p.judul}</b>
+              {p.keterangan && <span>{teksPolos(p.keterangan, 120)}</span>}
+            </figcaption>
+          </figure>
+        ))}
+      </div>
+    </section>
+  )}
+
+  <section class="form-servis" id="form-servis" aria-labelledby="judul-form">
+    <h2 id="judul-form">Ajukan servis</h2>
+    <p class="keterangan">Isi data di bawah. Kami buatkan nomor tiket supaya kamu bisa memantau status servis. Sudah punya tiket? <a href="/cek-tiket">Cek status tiket</a>.</p>
+    <form id="servis" novalidate>
+      <div class="baris">
+        <label class="kolom">
+          <span>Jenis servis</span>
+          <select id="jasa" name="jasa">
+            <option value="">Belum tahu / tanya dulu</option>
+            {jasa.map((j) => <option value={j.id}>{j.nama}</option>)}
+          </select>
+        </label>
+        <label class="kolom">
+          <span>Perangkat</span>
+          <select id="perangkat-jenis" name="perangkat_jenis">
+            <option value="mouse">Mouse</option>
+            <option value="keyboard">Keyboard</option>
+            <option value="lainnya">Lainnya</option>
+          </select>
+        </label>
+      </div>
+
+      <label class="kolom">
+        <span>Merek / tipe perangkat</span>
+        <input id="perangkat" name="perangkat" maxlength="80" placeholder="Contoh: Logitech G102" required />
+        <small class="galat" data-untuk="perangkat"></small>
+      </label>
+
+      <label class="kolom">
+        <span>Keluhan</span>
+        <textarea id="keluhan" name="keluhan" rows="4" maxlength="1000"
+          placeholder="Contoh: double click, scroll lompat, switch kiri tidak responsif…" required></textarea>
+        <small class="galat" data-untuk="keluhan"></small>
+      </label>
+
+      <label class="kolom">
+        <span>Foto perangkat <em>(opsional, maks 5)</em></span>
+        <input id="foto" name="foto" type="file" accept="image/jpeg,image/png,image/webp" multiple />
+        <small class="bantuan">Foto otomatis dikecilkan sebelum diunggah.</small>
+        <ul class="pratinjau" id="pratinjau-foto"></ul>
+      </label>
+
+      <div class="baris">
+        <label class="kolom">
+          <span>Nama</span>
+          <input id="nama" name="nama" autocomplete="name" maxlength="80" required />
+          <small class="galat" data-untuk="nama"></small>
+        </label>
+        <label class="kolom">
+          <span>WhatsApp</span>
+          <input id="wa" name="wa" type="tel" inputmode="tel" autocomplete="tel" placeholder="0812 3456 7890" maxlength="20" required />
+          <small class="galat" data-untuk="wa"></small>
+        </label>
+      </div>
+
+      <fieldset class="cara-kirim">
+        <legend>Cara kirim perangkat</legend>
+        <label class="pilihan">
+          <input type="radio" name="cara_kirim" value="kurir" checked />
+          <span><b>Kirim lewat kurir</b><small>Kami kabari alamat lewat WhatsApp setelah tiket dibuat.</small></span>
+        </label>
+        <label class="pilihan">
+          <input type="radio" name="cara_kirim" value="antar" />
+          <span><b>Antar langsung</b><small>Langsung ke {TOKO.kota} tanpa biaya kirim.</small></span>
+        </label>
+        <small class="galat" data-untuk="cara_kirim"></small>
+      </fieldset>
+
+      <label class="kolom">
+        <span>Provinsi tujuan kirim balik <em>(opsional)</em></span>
+        <select id="provinsi" name="provinsi"><option value="">— pilih nanti —</option></select>
+        <small class="bantuan">Dipakai untuk hitung ongkir kirim balik bila servis dibatalkan.</small>
+      </label>
+
+      <div class="galat-umum" id="galat-umum" role="alert" hidden></div>
+
+      <button type="submit" class="tombol utama" id="kirim">Buat tiket servis</button>
+    </form>
+  </section>
+
+  <section class="sukses" id="sukses" hidden>
+    <Maskot ukuran={120} senangSaatMuncul />
+    <h2>Tiket servis dibuat</h2>
+    <p class="nomor-tiket">Nomor tiket <b id="nomor-tiket"></b></p>
+    <p id="info-kirim" class="info-kirim"></p>
+    <div class="aksi">
+      <a class="tombol wa" id="wa-tiket" target="_blank" rel="noopener">Hubungi kami via WhatsApp</a>
+      <a class="tombol" id="cek-tiket" href="/cek-tiket">Cek status tiket</a>
+    </div>
+    <p class="simpan">Simpan nomor tiket ini. Kamu perlu 4 digit terakhir WhatsApp untuk mengecek status.</p>
   </section>
 </Base>
 
+<script>
+  import { kecilkanFoto, urlServis, MAKS_FOTO_SERVIS, type PesananDibuatServis } from "../lib/servis";
+  import { linkWA, TOKO, SERVIS } from "../config";
+
+  const form = document.getElementById("servis") as HTMLFormElement;
+  const galatUmum = document.getElementById("galat-umum") as HTMLElement;
+  const tombol = document.getElementById("kirim") as HTMLButtonElement;
+  const pratinjau = document.getElementById("pratinjau-foto") as HTMLElement;
+  const inputFoto = document.getElementById("foto") as HTMLInputElement;
+
+  // Isi provinsi dari zona ongkir (sama dengan keranjang)
+  (async () => {
+    try {
+      const pb = (import.meta.env.PUBLIC_PB_URL || "http://127.0.0.1:8090").replace(/\/$/, "");
+      const dasar = import.meta.env.DEV ? "" : pb;
+      const res = await fetch(`${dasar}/api/collections/zona_ongkir/records?perPage=50&sort=urutan`);
+      if (!res.ok) return;
+      const data = await res.json();
+      const sel = document.getElementById("provinsi") as HTMLSelectElement;
+      const semua = (data.items as { provinsi: string[] }[]).flatMap((z) => z.provinsi || []).sort((a, b) => a.localeCompare(b, "id"));
+      for (const p of semua) {
+        const o = document.createElement("option");
+        o.value = p;
+        o.textContent = p;
+        sel.appendChild(o);
+      }
+    } catch {}
+  })();
+
+  function nilai(id: string) {
+    return (document.getElementById(id) as HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement)?.value.trim() ?? "";
+  }
+
+  // pratinjau foto + batasi 5
+  inputFoto.addEventListener("change", () => {
+    const berkas = Array.from(inputFoto.files || []).slice(0, MAKS_FOTO_SERVIS);
+    pratinjau.replaceChildren(
+      ...berkas.map((b) => {
+        const li = document.createElement("li");
+        const img = document.createElement("img");
+        img.src = URL.createObjectURL(b);
+        img.alt = b.name;
+        li.appendChild(img);
+        return li;
+      }),
+    );
+    if (berkas.length < (inputFoto.files?.length || 0)) {
+      tampilkanGalat({ foto: `Maksimal ${MAKS_FOTO_SERVIS} foto.` });
+    }
+  });
+
+  function tampilkanGalat(galat: Record<string, string>) {
+    document.querySelectorAll<HTMLElement>("[data-untuk]").forEach((el) => {
+      const pesan = galat[el.dataset.untuk || ""];
+      el.textContent = pesan || "";
+    });
+    form.querySelectorAll<HTMLElement>("input, select, textarea").forEach((el) => {
+      el.setAttribute("aria-invalid", String(!!galat[el.id] || !!galat[el.name]));
+    });
+    if (Object.keys(galat).length) {
+      galatUmum.hidden = false;
+      galatUmum.textContent = galat.umum || "Periksa lagi isian yang ditandai merah.";
+    } else {
+      galatUmum.hidden = true;
+      galatUmum.textContent = "";
+    }
+  }
+
+  // validasi ringan di browser (server tetap memeriksa ulang)
+  function validasi() {
+    const g: Record<string, string> = {};
+    if (nilai("nama").length < 2) g.nama = "Nama minimal 2 huruf.";
+    if (!/^(\+?62|0)8\d{7,12}$/.test(nilai("wa").replace(/[\s-]/g, ""))) g.wa = "Nomor WhatsApp tidak valid.";
+    if (nilai("perangkat").length < 2) g.perangkat = "Isi merek/tipe perangkat.";
+    if (nilai("keluhan").length < 10) g.keluhan = "Ceritakan keluhan minimal 10 huruf.";
+    return g;
+  }
+
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const g = validasi();
+    tampilkanGalat(g);
+    if (Object.keys(g).length) {
+      document.getElementById(Object.keys(g)[0])?.focus();
+      return;
+    }
+
+    tombol.disabled = true;
+    tombol.textContent = "Mengirim…";
+    try {
+      const fd = new FormData();
+      fd.set("jasa", nilai("jasa"));
+      fd.set("perangkat", nilai("perangkat"));
+      fd.set("keluhan", nilai("keluhan"));
+      fd.set("nama", nilai("nama"));
+      fd.set("wa", nilai("wa"));
+      const cara = (form.querySelector('input[name="cara_kirim"]:checked') as HTMLInputElement)?.value || "kurir";
+      fd.set("cara_kirim", cara);
+      fd.set("provinsi", nilai("provinsi"));
+      // jenis perangkat untuk berat kirim balik disimpan di keluhan tidak; kirim terpisah bila perlu
+      const jenisPerangkat = nilai("perangkat-jenis");
+      fd.set("perangkat_jenis", jenisPerangkat);
+
+      const berkas = Array.from(inputFoto.files || []).slice(0, MAKS_FOTO_SERVIS);
+      for (const b of berkas) {
+        const kecil = await kecilkanFoto(b);
+        fd.append("foto", new File([kecil], b.name.replace(/\.\w+$/, "") + ".jpg", { type: "image/jpeg" }));
+      }
+
+      const res = await fetch(urlServis(), { method: "POST", body: fd });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        if (res.status === 400 && data.galat) {
+          tampilkanGalat({ ...data.galat, umum: data.galat.umum ?? data.pesan });
+        } else {
+          tampilkanGalat({ umum: data.pesan ?? "Tiket belum bisa dibuat. Coba lagi sebentar." });
+        }
+        tombol.disabled = false;
+        tombol.textContent = "Buat tiket servis";
+        return;
+      }
+
+      tampilkanSukses(data as PesananDibuatServis, cara);
+    } catch {
+      tampilkanGalat({ umum: "Tidak bisa terhubung ke server. Coba lagi, atau hubungi kami lewat WhatsApp." });
+      tombol.disabled = false;
+      tombol.textContent = "Buat tiket servis";
+    }
+  });
+
+  function tampilkanSukses(hasil: PesananDibuatServis, cara: string) {
+    form.closest("section")!.hidden = true;
+    const sukses = document.getElementById("sukses") as HTMLElement;
+    sukses.hidden = false;
+    document.getElementById("nomor-tiket")!.textContent = hasil.nomor;
+    const info = document.getElementById("info-kirim")!;
+    info.textContent =
+      cara === "kurir"
+        ? `Kirim perangkat ke: ${SERVIS.alamatKirim}. Sertakan nomor tiket di paket.`
+        : `Antar langsung ke ${TOKO.kota}. Sebutkan nomor tiket saat datang.`;
+    const wa = document.getElementById("wa-tiket") as HTMLAnchorElement;
+    wa.href = linkWA(`Halo ${TOKO.nama}, saya baru membuat tiket servis ${hasil.nomor}. Mohon info langkah selanjutnya.`);
+    const cek = document.getElementById("cek-tiket") as HTMLAnchorElement;
+    cek.href = `/cek-tiket?nomor=${encodeURIComponent(hasil.nomor)}`;
+    sukses.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+</script>
+
+
+
 <style>
-  .segera { display: flex; flex-direction: column; align-items: center; text-align: center; padding: 32px 0 16px; }
-  h1 { margin: 20px 0 6px; font-size: 1.4rem; }
-  p { margin: 0 0 20px; color: var(--muted); max-width: 40ch; }
+  h2 { font-size: 1.25rem; margin: 0 0 12px; }
+
+  .hero-servis {
+    display: flex; align-items: center; justify-content: space-between; gap: 24px;
+    padding: 16px 0 24px; border-bottom: 1px solid var(--line);
+  }
+  .hero-servis h1 { margin: 0 0 8px; font-size: 1.6rem; }
+  .lead { margin: 0 0 16px; color: var(--muted); max-width: 46ch; }
+  .aksi { display: flex; flex-wrap: wrap; gap: 10px; }
+
+  .aturan { padding: 24px 0; border-bottom: 1px solid var(--line); }
+  .aturan ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
+  .aturan li {
+    display: flex; flex-direction: column; gap: 4px; padding: 14px 16px;
+    background: var(--card); border: 1px solid var(--line); border-radius: var(--radius);
+  }
+  .aturan li b { font-size: 0.95rem; }
+  .aturan li span { color: var(--muted); font-size: 0.9rem; }
+
+  .jasa, .portofolio, .form-servis { padding: 24px 0; border-bottom: 1px solid var(--line); }
+  .grid-jasa { display: grid; gap: 14px; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); }
+  .kartu-jasa { padding: 16px; background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); }
+  .kartu-jasa h3 { margin: 4px 0 8px; font-size: 1.05rem; }
+  .kartu-jasa .deskripsi { color: var(--muted); font-size: 0.9rem; margin: 0 0 8px; }
+  .kartu-jasa .deskripsi :global(p) { margin: 0; }
+  .harga-mulai { font-weight: 700; margin: 8px 0 2px; }
+  .estimasi { color: var(--muted); font-size: 0.85rem; margin: 0; }
+
+  .grid-portofolio { display: grid; gap: 16px; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); }
+  .kartu-portofolio { margin: 0; background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; }
+  .pasangan { display: grid; grid-template-columns: 1fr 1fr; }
+  .pasangan img, .pasangan .kosong { width: 100%; aspect-ratio: 1 / 1; object-fit: cover; display: flex; align-items: center; justify-content: center; color: var(--muted); background: #efeeea; font-size: 0.8rem; }
+  .kartu-portofolio figcaption { display: flex; flex-direction: column; gap: 2px; padding: 10px 12px; }
+  .kartu-portofolio figcaption span { color: var(--muted); font-size: 0.85rem; }
+
+  .form-servis .keterangan { color: var(--muted); margin: 0 0 16px; }
+  #servis { display: grid; gap: 14px; max-width: 640px; }
+  .baris { display: grid; gap: 14px; grid-template-columns: 1fr 1fr; }
+  .kolom { display: grid; gap: 6px; font-size: 0.9rem; }
+  .kolom > span { font-weight: 600; }
+  .kolom em { font-weight: 400; color: var(--muted); font-style: normal; }
+  #servis input, #servis select, #servis textarea {
+    font: inherit; padding: 10px 12px; border: 1px solid var(--line); border-radius: var(--radius);
+    background: var(--card); width: 100%;
+  }
+  #servis input:focus, #servis select:focus, #servis textarea:focus { border-color: var(--primary); outline: none; box-shadow: 0 0 0 3px var(--primary-alpha); }
+  #servis [aria-invalid="true"] { border-color: #d32f2f; }
+  .bantuan { color: var(--muted); font-size: 0.8rem; }
+  .galat { color: #d32f2f; font-size: 0.82rem; }
+  .galat:empty { display: none; }
+  .galat-umum { color: #d32f2f; font-size: 0.9rem; padding: 10px 12px; background: #fde8e7; border-radius: var(--radius); }
+
+  .pratinjau { list-style: none; display: flex; flex-wrap: wrap; gap: 8px; margin: 4px 0 0; padding: 0; }
+  .pratinjau :global(li) { width: 64px; height: 64px; border-radius: 8px; overflow: hidden; border: 1px solid var(--line); }
+  .pratinjau :global(img) { width: 100%; height: 100%; object-fit: cover; }
+
+  .cara-kirim { border: 1px solid var(--line); border-radius: var(--radius); padding: 12px 14px; display: grid; gap: 10px; }
+  .cara-kirim legend { font-weight: 600; font-size: 0.9rem; padding: 0 4px; }
+  .pilihan { display: flex; gap: 10px; align-items: flex-start; cursor: pointer; }
+  .pilihan input { margin-top: 3px; }
+  .pilihan span { display: grid; gap: 2px; }
+  .pilihan small { color: var(--muted); font-size: 0.82rem; }
+
+  #kirim { justify-self: start; font: inherit; font-weight: 600; cursor: pointer; }
+  #kirim:disabled { opacity: 0.6; cursor: default; }
+
+  .sukses { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 10px; padding: 32px 0; }
+  .sukses h2 { margin: 8px 0 0; }
+  .nomor-tiket { margin: 0; color: var(--muted); }
+  .nomor-tiket b { color: var(--text); font-size: 1.2rem; letter-spacing: 0.03em; }
+  .info-kirim { max-width: 46ch; color: var(--muted); }
+  .sukses .aksi { justify-content: center; }
+  .simpan { color: var(--muted); font-size: 0.85rem; max-width: 44ch; }
+
+  @media (max-width: 600px) {
+    .hero-servis { flex-direction: column-reverse; align-items: flex-start; gap: 12px; }
+    .hero-servis h1 { font-size: 1.35rem; }
+    .baris { grid-template-columns: 1fr; }
+    .aksi { width: 100%; }
+    .aksi .tombol { flex: 1; }
+  }
 </style>
+

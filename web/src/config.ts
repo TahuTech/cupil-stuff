@@ -17,3 +17,15 @@ export const LINI: Record<string, string> = {
   model3d: "Model 3D",
   edc: "EDC",
 };
+
+// ---------- Jasa servis ----------
+export const SERVIS = {
+  // Alamat untuk mengirim perangkat (ditampilkan di halaman sukses bila cara kirim = kurir).
+  alamatKirim: "Cupil Stuff — Jl. Contoh No. 1, Surabaya, Jawa Timur 60123 (isi alamat lengkap toko di web/src/config.ts)",
+  // Berat bawaan perangkat (gram) untuk hitung ongkir kirim balik memakai zona yang sama.
+  beratPerangkat: {
+    mouse: 300,
+    keyboard: 900,
+    lainnya: 500,
+  } as Record<string, number>,
+};

@@ -43,6 +43,24 @@ export type Produk = {
 
 export type ZonaOngkir = { id: string; nama: string; provinsi: string[]; tarifPerKg: number; estimasi: string };
 
+export type Jasa = {
+  id: string;
+  kode: string;
+  nama: string;
+  perangkat: string;
+  deskripsi: string; // HTML dari editor
+  hargaMulai: number;
+  estimasi: string;
+};
+
+export type Portofolio = {
+  id: string;
+  judul: string;
+  fotoSebelum: string | null;
+  fotoSesudah: string | null;
+  keterangan: string;
+};
+
 // URL file:
 // - dev: relatif (/api/files/...), diteruskan proxy Vite ke PocketBase (lihat astro.config.mjs),
 //   supaya bisa dibuka dari HP lewat `npm run dev -- --host` walau PocketBase hanya di 127.0.0.1.
@@ -185,4 +203,30 @@ export function dataVarianKeranjang(produk: Produk[]): Record<string, import("./
     }
   }
   return hasil;
+}
+
+// ---------- Halaman servis (tahap 5) ----------
+
+export async function ambilJasa(): Promise<Jasa[]> {
+  const rec = await ambilSemua("jasa", { sort: "urutan,kode" });
+  return rec.map((j) => ({
+    id: j.id,
+    kode: j.kode,
+    nama: j.nama,
+    perangkat: j.perangkat || "",
+    deskripsi: j.deskripsi || "",
+    hargaMulai: j.harga_mulai || 0,
+    estimasi: j.estimasi || "",
+  }));
+}
+
+export async function ambilPortofolio(): Promise<Portofolio[]> {
+  const rec = await ambilSemua("portofolio", { sort: "urutan" });
+  return rec.map((p) => ({
+    id: p.id,
+    judul: p.judul,
+    fotoSebelum: p.foto_sebelum ? fileUrl(p, p.foto_sebelum) : null,
+    fotoSesudah: p.foto_sesudah ? fileUrl(p, p.foto_sesudah) : null,
+    keterangan: p.keterangan || "",
+  }));
 }

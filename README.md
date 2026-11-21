@@ -29,13 +29,14 @@ cupil-stuff/
 ├── pocketbase/
 │   ├── Dockerfile            PocketBase v0.40.3 (versi dikunci)
 │   ├── pb_migrations/        skema koleksi + data 6 zona ongkir
-│   └── pb_hooks/             build ulang otomatis, kode varian otomatis
+│   └── pb_hooks/             build ulang otomatis, kode varian otomatis, route checkout/pesanan/servis/tiket
 └── web/                      katalog Astro (di-deploy ke Cloudflare Pages)
     └── src/
-        ├── config.ts         nama toko, nomor WhatsApp
+        ├── config.ts         nama toko, nomor WhatsApp, alamat kirim servis, berat perangkat
         ├── lib/pb.ts         ambil data dari PocketBase saat build
         ├── lib/ongkir.ts     rumus ongkir (dipakai di tahap 3) + ongkir.test.ts
-        └── pages/            landing (/), katalog, produk, servis (placeholder), 404
+        ├── lib/servis.ts     helper form servis (kecilkan foto, alamat route) + servis-hook.test.ts
+        └── pages/            landing (/), katalog, produk, keranjang, bayar, servis, cek-tiket, 404
 ```
 
 ## 1. Jalankan PocketBase di homelab
@@ -161,14 +162,33 @@ Route `GET /api/pesanan/{nomor}?wa=XXXX` mengembalikan data terbatas:
 
 **Teks QRIS toko** (`PUBLIC_QRIS_STATIS`): scan stiker QRIS dengan aplikasi pembaca QR, salin teksnya (diawali `000201`), lalu isi di `web/.env` dan di environment variables Cloudflare Pages. Jangan commit nilainya. Uji dengan scan dari aplikasi bank/e-wallet sampai layar konfirmasi saja (jangan dibayar), pastikan nama toko dan nominalnya benar.
 
+## Jasa servis
+
+Alur customer:
+
+1. Buka `/servis`: lihat daftar jasa, portofolio sebelum/sesudah, dan aturan (tanpa DP, cek gratis, bayar setelah selesai, tolak estimasi hanya bayar ongkir kirim balik, boleh antar langsung).
+2. Isi form: jenis servis, perangkat, keluhan, foto (opsional, maks 5, dikecilkan di browser), nama, WhatsApp, cara kirim (kurir/antar), provinsi tujuan kirim balik.
+3. `POST /api/servis` membuat tiket `SRV-YYMMDD-XXXX` (status `menunggu_perangkat`). Halaman menampilkan nomor tiket + alamat kirim (atau info antar) + tombol WhatsApp.
+4. Customer memantau status di `/cek-tiket` (nomor tiket + 4 digit terakhir WA).
+
+Alur pemilik (di panel admin `api.<domain>/_/`, koleksi **tiket_servis**):
+
+1. **Diterima** — ubah status `diterima` saat perangkat datang.
+2. **Dicek** — `dicek` sambil memeriksa.
+3. **Estimasi** — isi `estimasi_biaya`, ubah status `menunggu_persetujuan`. Customer melihat estimasi + tombol setuju/tolak di `/cek-tiket`.
+4. **Dikerjakan / Selesai** — setelah disetujui, `dikerjakan`; setelah beres isi `biaya_final`, ubah `selesai` (customer melihat QRIS bernominal di `/cek-tiket`).
+5. **Kirim balik** — ubah `dikirim` setelah mengirim. Jika ditolak: isi `ongkir_kirim_balik`, ubah `dikembalikan`.
+
+Berat bawaan perangkat untuk ongkir kirim balik dan alamat kirim diatur di `web/src/config.ts` (`SERVIS.beratPerangkat`, `SERVIS.alamatKirim`).
+
 ## Status
 
 - [x] Tahap 1: PocketBase, skema, zona ongkir, hook build ulang
 - [x] Tahap 2: landing page, katalog (cari, filter lini/kategori), halaman produk (galeri, 3D + warna, varian, stok, jumlah, pesan via WhatsApp, link marketplace)
 - [x] Tahap 3: keranjang, ongkir per zona, checkout (`POST /api/checkout`, hitung ulang di server), QRIS nominal otomatis, pesanan tersimpan
 - [x] Tahap 4: konfirmasi bayar, stok otomatis, ongkir manual, link WA, halaman /bayar
-- [ ] Tahap 5: halaman jasa servis, form + nomor tiket, cek status
+- [x] Tahap 5: halaman jasa servis, form + nomor tiket (`POST /api/servis`), cek status (`GET /api/tiket`), QRIS saat selesai
 
 ## Catatan
 
-Sudah dicek: migrasi berjalan di PocketBase 0.40.3 (6 zona ongkir terisi), `npm test` lulus, dan `npm run build` berhasil dengan katalog kosong. Halaman produk belum dicoba dengan data sungguhan. Jika migrasi gagal, cek `docker compose logs pocketbase`.
+Sudah dicek: migrasi berjalan di PocketBase 0.40.3 (6 zona ongkir terisi), `npm test` lulus (104 test), dan `npm run build` berhasil (10 halaman). Route `/api/pesanan` dan `/api/tiket` diuji langsung: 4 digit benar mengembalikan data, 4 digit salah ditolak, 5 kali salah lalu diblokir 15 menit. Jika migrasi gagal, cek `docker compose logs pocketbase`.

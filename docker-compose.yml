@@ -22,7 +22,7 @@ services:
       # Hanya untuk pengujian lokal; biarkan kosong.
       TELEGRAM_API_URL: ${TELEGRAM_API_URL:-}
     # CORS: origin yang boleh memanggil API dari browser (route /api/checkout).
-    # Produksi: isi PB_ORIGINS di .env dengan alamat katalog, misalnya https://cupilstuff.id
+    # Produksi: isi PB_ORIGINS di .env dengan alamat katalog, misalnya https://cupilstuff.web.id
     # Default untuk development: astro dev / preview di localhost.
     command:
       - /pb/pocketbase

@@ -11,9 +11,26 @@ cd web && cp .env.example .env           # ganti PUBLIC_PB_URL=http://127.0.0.1:
 npm install
 npm run dev                              # http://localhost:4321
 npm test                                 # unit test hitungan (ongkir, dst.)
+BUILD_DEV=1 npm run build                # build lokal (lewati cek env produksi)
 ```
 
 PocketBase harus jalan saat `npm run dev`/`npm run build`, karena data katalog diambil saat build.
+
+`npm run build` menjalankan `prebuild` yang **menggagalkan build** bila `PUBLIC_PB_URL`/`PUBLIC_SITE_URL` kosong atau bukan `https://` — supaya salah konfigurasi di Cloudflare Pages cepat ketahuan. Untuk build lokal pakai `BUILD_DEV=1`.
+
+## Go-live (produksi)
+
+Checklist lengkap langkah demi langkah ada di **[docs/GO-LIVE.md](docs/GO-LIVE.md)** (domain `cupilstuff.web.id`). Ringkasnya:
+
+1. Database produksi mulai **kosong**: `./scripts/siapkan-produksi.sh` → migrasi koleksi + 6 zona ongkir saja (menolak jalan bila `pb_data` sudah berisi data), lalu buat superuser sendiri.
+2. Cloudflare Tunnel `api.cupilstuff.web.id`; Cloudflare Access hanya di path `_` (panel), **bukan** `/api/*`.
+3. R2 `cupilstuff-files` + `cdn.cupilstuff.web.id` + CORS.
+4. Pengaturan PocketBase sebagai kode: `node scripts/siapkan-pocketbase.mjs` (Application URL, trusted proxy `CF-Connecting-IP`, S3, backup harian, SMTP).
+5. Cloudflare Pages (root `web`, `npm run build`, `dist`) + `www` dialihkan ke domain utama + deploy hook.
+6. UptimeRobot ke `https://api.cupilstuff.web.id/api/health`.
+7. Uji akhir: `./scripts/cek-produksi.sh`.
+
+Uji homelab mati: `docker compose stop pocketbase` → katalog/foto/3D tetap terbuka, keranjang beralih ke WhatsApp; `docker compose start pocketbase` → normal lagi dalam ±15 detik tanpa reload.
 
 Data contoh untuk development (kategori Pisau/Figur, EDC-001, MDL-001, EDC-002 nonaktif). Skrip ini menghapus lalu membuat ulang data contoh, jadi **jangan jalankan ke produksi**:
 
@@ -67,17 +84,17 @@ Di panel PocketBase:
 
 Agar katalog memuat file langsung dari R2 (bukan lewat homelab):
 
-1. R2 → bucket → **Settings → Custom Domains**: tambahkan `cdn.<domain>`.
+1. R2 → bucket → **Settings → Custom Domains**: tambahkan `cdn.cupilstuff.web.id`.
 2. **CORS policy** bucket (diperlukan supaya model-viewer bisa memuat `.glb`):
    ```json
-   [{ "AllowedOrigins": ["https://<domain>", "http://localhost:4321"], "AllowedMethods": ["GET", "HEAD"], "AllowedHeaders": ["*"] }]
+   [{ "AllowedOrigins": ["https://cupilstuff.web.id", "http://localhost:4321"], "AllowedMethods": ["GET", "HEAD"], "AllowedHeaders": ["*"] }]
    ```
 
 ## 3. Cloudflare Tunnel
 
 Zero Trust → Networks → Tunnels → buat tunnel (tipe *cloudflared*), lalu salin token-nya ke `CLOUDFLARE_TUNNEL_TOKEN` di `.env`.
 
-Public hostname: `api.<domain>` → `http://pocketbase:8090`
+Public hostname: `api.cupilstuff.web.id` → `http://pocketbase:8090`
 
 ```bash
 docker compose --profile tunnel up -d
@@ -85,7 +102,7 @@ docker compose --profile tunnel up -d
 
 Tanpa `--profile tunnel`, `cloudflared` tidak dijalankan (cocok untuk development).
 
-Untuk panel admin, buat aplikasi **Cloudflare Access** di path `api.<domain>/_/` supaya hanya emailmu yang bisa masuk.
+Untuk panel admin, buat aplikasi **Cloudflare Access** di path `api.cupilstuff.web.id/_/` supaya hanya emailmu yang bisa masuk.
 
 ## 4. Katalog (Astro)
 
@@ -102,8 +119,8 @@ Data diambil dari PocketBase **saat build**. Kalau ada perubahan produk saat `np
 
 - Hubungkan repo GitHub, dengan **Root directory** `web`
 - Build command `npm run build`, output `dist`
-- Environment variables: `PUBLIC_PB_URL=https://api.<domain>`, `PUBLIC_CDN_URL=https://cdn.<domain>`, `PUBLIC_SITE_URL=https://<domain>`, dan `PUBLIC_QRIS_STATIS` (teks QRIS statis toko; lihat bagian Pembayaran)
-- Di `.env` homelab, isi `PB_ORIGINS=https://<domain>` supaya browser boleh memanggil `/api/checkout` (CORS), lalu `docker compose up -d` lagi.
+- Environment variables: `PUBLIC_PB_URL=https://api.cupilstuff.web.id`, `PUBLIC_CDN_URL=https://cdn.cupilstuff.web.id`, `PUBLIC_SITE_URL=https://cupilstuff.web.id`, dan `PUBLIC_QRIS_STATIS` (teks QRIS statis toko; lihat bagian Pembayaran)
+- Di `.env` homelab, isi `PB_ORIGINS=https://cupilstuff.web.id` supaya browser boleh memanggil `/api/checkout` (CORS), lalu `docker compose up -d` lagi.
 - **Settings → Builds → Deploy hooks**: buat hook, lalu isi URL-nya ke `PAGES_DEPLOY_HOOK` di `.env` homelab, kemudian `docker compose up -d` lagi. Setiap perubahan produk akan memicu build ulang, paling banyak sekali per 60 detik.
 
 ## Mengisi produk
@@ -134,7 +151,7 @@ Pembatasan per IP (dari header Cloudflare): paling banyak 10 pesanan dan 10 tike
 
 ## Panduan pemilik toko: memproses pesanan
 
-**Akses panel admin:** buka `api.<domain>/_/` (login lewat Cloudflare Access dulu). Tidak ada panel admin terpisah — semua proses dilakukan langsung dari dashboard PocketBase bawaan di koleksi **pesanan**. Setelah login, buka `api.<domain>/_/#/collections/pesanan`, klik record pesanan yang ingin diproses, ubah field yang diperlukan, lalu simpan. Link WhatsApp (`link_wa_*`) bisa langsung diklik dari panel untuk mengirim pesan ke pembeli.
+**Akses panel admin:** buka `api.cupilstuff.web.id/_/` (login lewat Cloudflare Access dulu). Tidak ada panel admin terpisah — semua proses dilakukan langsung dari dashboard PocketBase bawaan di koleksi **pesanan**. Setelah login, buka `api.cupilstuff.web.id/_/#/collections/pesanan`, klik record pesanan yang ingin diproses, ubah field yang diperlukan, lalu simpan. Link WhatsApp (`link_wa_*`) bisa langsung diklik dari panel untuk mengirim pesan ke pembeli.
 
 Link WhatsApp di pesanan dihitung ulang otomatis setiap kali pesanan disimpan, jadi selalu sesuai total, status, dan resi terbaru.
 
@@ -178,7 +195,7 @@ Setiap pesanan baru, pesanan yang ongkirnya perlu dikonfirmasi (di atas 5 kg ata
 1. Di Telegram, buka **@BotFather**, kirim `/newbot`, ikuti petunjuknya. Simpan **token** yang diberikan (bentuknya `123456789:AA...`).
 2. Buka bot barumu dan kirim pesan apa saja (misalnya `halo`), supaya bot boleh mengirim pesan kepadamu.
 3. Buka `https://api.telegram.org/bot<TOKEN>/getUpdates` di browser. Cari `"chat":{"id":...}`; angka itu adalah **chat id**.
-4. Isi di `.env` homelab: `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`, dan `API_URL=https://api.<domain>` (untuk link ke panel admin). Lalu `docker compose up -d` lagi.
+4. Isi di `.env` homelab: `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`, dan `API_URL=https://api.cupilstuff.web.id` (untuk link ke panel admin). Lalu `docker compose up -d` lagi.
 
 Jika token atau chat id kosong, notifikasi dilewati tanpa galat. Jika Telegram sedang gangguan, pesanan dan tiket tetap tersimpan (pembeli menunggu paling lama sekitar 5 detik) dan kegagalannya tercatat di **Logs** panel admin. Jangan simpan token di repo.
 
@@ -186,10 +203,10 @@ Jika token atau chat id kosong, notifikasi dilewati tanpa galat. Jika Telegram s
 
 Notifikasi Telegram di atas **dikirim dari homelab**, jadi ikut mati saat homelab/PocketBase mati — justru saat kamu paling perlu tahu. Karena itu, pantau dari **luar**:
 
-- Daftar gratis di [UptimeRobot](https://uptimerobot.com) (atau layanan sejenis), buat monitor tipe **HTTP(s)** ke `https://api.<domain>/api/health`. Atur interval 5 menit.
+- Daftar gratis di [UptimeRobot](https://uptimerobot.com) (atau layanan sejenis), buat monitor tipe **HTTP(s)** ke `https://api.cupilstuff.web.id/api/health`. Atur interval 5 menit.
 - `/api/health` adalah endpoint bawaan PocketBase (menjawab `{"code":200,...}` selama server hidup), jadi tidak perlu membuat route sendiri.
 - Aktifkan **alert contact** ke email (gratis) dan/atau **Telegram**: UptimeRobot punya integrasi Telegram bawaan (isi token bot + chat id yang sama seperti bagian sebelumnya). Dengan begitu kamu tetap dapat kabar walau homelab mati total.
-- Tambahkan monitor kedua ke `https://<domain>` (katalog) untuk memastikan situs statis tetap terbuka.
+- Tambahkan monitor kedua ke `https://cupilstuff.web.id` (katalog) untuk memastikan situs statis tetap terbuka.
 
 Situs katalog memakai deteksi yang sama di browser: bila `/api/health` tidak menjawab dalam 3 detik, halaman keranjang, servis, cek tiket, dan bayar otomatis beralih ke pesan lewat WhatsApp (banner kecil "Pemesanan otomatis sedang istirahat"). Begitu server hidup lagi, halaman kembali normal sendiri dalam sekitar 15 detik, tanpa reload.
 
@@ -202,7 +219,7 @@ Alur customer:
 3. `POST /api/servis` membuat tiket `SRV-YYMMDD-XXXX` (status `menunggu_perangkat`). Halaman menampilkan nomor tiket, alamat kirim (atau info antar), tombol WhatsApp, dan ajakan menyimpan nomor tiket.
 4. Customer memantau status di `/cek-tiket` (nomor tiket + 4 digit terakhir WA): urutan langkah, estimasi, tagihan, dan QRIS bernominal.
 
-Cara memproses tiket (panel admin `api.<domain>/_/`, koleksi **tiket_servis**). Setiap kali tiket disimpan, `ongkir_kirim_balik`, `total_tagihan`, dan link WhatsApp dihitung ulang otomatis. Buka link `link_wa_*` untuk mengirim kabar ke customer (pesan sudah terisi):
+Cara memproses tiket (panel admin `api.cupilstuff.web.id/_/`, koleksi **tiket_servis**). Setiap kali tiket disimpan, `ongkir_kirim_balik`, `total_tagihan`, dan link WhatsApp dihitung ulang otomatis. Buka link `link_wa_*` untuk mengirim kabar ke customer (pesan sudah terisi):
 
 1. **Perangkat datang**: ubah status ke `diterima`, lalu buka `link_wa_diterima`.
 2. **Dicek**: ubah ke `dicek` selama pemeriksaan (gratis).

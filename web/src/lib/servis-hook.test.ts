@@ -153,7 +153,7 @@ describe("totalTagihan (field total_tagihan di panel admin)", () => {
 });
 
 describe("linkWA (field url terhitung untuk pemilik toko)", () => {
-  const opsi = { toko: "Cupil Stuff", situs: "https://cupilstuff.id" };
+  const opsi = { toko: "Cupil Stuff", situs: "https://cupilstuff.web.id" };
   const t = (lain: Record<string, unknown> = {}) => ({
     nomor: "SRV-261121-ABCD", nama: "Budi", wa: "6281234567890", status: "menunggu_perangkat",
     cara_kirim: "kurir", estimasi_biaya: 0, biaya_final: 0, ongkir_kirim_balik: 20_000, resi: "", ...lain,
@@ -167,7 +167,7 @@ describe("linkWA (field url terhitung untuk pemilik toko)", () => {
     const l = S.linkWA(t({ status: "diterima" }), opsi);
     expect(l.link_wa_diterima).toMatch(/^https:\/\/wa\.me\/6281234567890\?text=/);
     expect(teks(l.link_wa_diterima)).toContain("SRV-261121-ABCD");
-    expect(teks(l.link_wa_diterima)).toContain("https://cupilstuff.id/cek-tiket?nomor=SRV-261121-ABCD");
+    expect(teks(l.link_wa_diterima)).toContain("https://cupilstuff.web.id/cek-tiket?nomor=SRV-261121-ABCD");
   });
   it("estimasi menyebut nominal dan ongkir kirim balik bila ditolak", () => {
     const l = S.linkWA(t({ status: "menunggu_persetujuan", estimasi_biaya: 75_000 }), opsi);

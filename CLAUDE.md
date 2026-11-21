@@ -11,12 +11,12 @@ Biaya rutin harus tetap praktis hanya domain. Jangan menambah layanan berbayar, 
 | Katalog | Astro (output statis), di-deploy ke Cloudflare Pages |
 | CMS + database | PocketBase **v0.40.x** (JS hooks dan migrations gaya v0.23+), berjalan di Docker di homelab |
 | Akses dari internet | Cloudflare Tunnel (`cloudflared` di docker compose); tanpa port forwarding |
-| File (foto, .glb) dan backup | Cloudflare R2 lewat pengaturan S3 PocketBase; katalog memuat file dari `cdn.<domain>` |
+| File (foto, .glb) dan backup | Cloudflare R2 lewat pengaturan S3 PocketBase; katalog memuat file dari `cdn.cupilstuff.web.id` |
 | 3D | `<model-viewer>` dari Google (CDN), ganti warna lewat `material.pbrMetallicRoughness.setBaseColorFactor` |
 | Pembayaran | QRIS statis toko yang nominalnya disisipkan di browser; konfirmasi manual oleh pemilik |
 | Kurir | J&T EZ, tarif flat per zona (tanpa API) |
 
-Subdomain: `<domain>` (katalog), `cdn.<domain>` (R2 publik), `api.<domain>` (PocketBase lewat Tunnel), dan panel admin `api.<domain>/_/` yang dikunci dengan Cloudflare Access.
+Domain: **cupilstuff.web.id**. Subdomain: `cdn.cupilstuff.web.id` (R2 publik), `api.cupilstuff.web.id` (PocketBase lewat Tunnel), dan panel admin `api.cupilstuff.web.id/_/` yang dikunci dengan Cloudflare Access (path `_` saja; `/api/*` terbuka).
 
 Prinsip arsitektur: **katalog, foto, dan 3D harus tetap bisa dibuka walaupun homelab mati.** Hanya pesanan baru, cek tiket, dan admin yang boleh bergantung ke homelab.
 
@@ -29,6 +29,8 @@ docker-compose.yml          pocketbase + cloudflared
 pocketbase/Dockerfile       unduh rilis PocketBase sesuai PB_VERSION dan TARGETARCH
 pocketbase/pb_migrations/   skema + data awal (zona ongkir)
 pocketbase/pb_hooks/        hook dan route khusus (*.pb.js); kode bersama lewat require(`${__hooks}/x.js`)
+scripts/                    seed-dev (lokal), siapkan-produksi, siapkan-pocketbase, cek-produksi
+docs/GO-LIVE.md             checklist go-live langkah demi langkah
 web/                        proyek Astro
 ```
 
@@ -48,7 +50,7 @@ web/                        proyek Astro
 
 Link "kembali ke katalog" selalu ke `/katalog`, bukan `/`.
 
-Halaman `/keranjang`, `/servis`, `/cek-tiket`, dan `/bayar` menampilkan banner "Pemesanan otomatis sedang istirahat" dan beralih ke WhatsApp saat homelab mati (`lib/status-server.ts`). Landing, katalog, dan produk tidak menampilkan banner.
+Halaman `/keranjang`, `/servis`, `/cek-tiket`, dan `/bayar` memakai `lib/status-server.ts` untuk beralih ke WhatsApp. Landing, katalog, dan produk tetap statis tanpa deteksi.
 
 Build memakai `build.format: "file"` (`/katalog` → `katalog.html`). Route API khusus: `POST /api/checkout` (`pb_hooks/checkout.pb.js`), `GET /api/pesanan/{nomor}?wa=XXXX` (`pb_hooks/pesanan.api.pb.js`), `POST /api/servis` (`pb_hooks/servis.pb.js`), `GET /api/tiket/{nomor}?wa=XXXX` (`pb_hooks/tiket.pb.js`); CORS diatur lewat `PB_ORIGINS` (flag `--origins` di compose).
 
@@ -111,6 +113,9 @@ Stok EDC dipakai bersama dengan marketplace dan diperbarui manual oleh pemilik. 
 - Hitungan ongkir ada di dua tempat: `web/src/lib/ongkir.ts` dan `pocketbase/pb_hooks/ongkir.js`. Ubah keduanya bersamaan; `ongkir-hook.test.ts` memastikan hasilnya sama.
 - Isi `PUBLIC_QRIS_STATIS` jangan pernah ditampilkan atau dicatat di log, laporan, maupun commit.
 - Tidak ada domain situs tertulis di kode. Hook memakai env `SITE_URL` (tautan `/bayar`, `/cek-tiket`) dan `API_URL` (link panel admin) lewat `pb_hooks/bersama.js`; web memakai `PUBLIC_SITE_URL` / `PUBLIC_PB_URL`.
+- Pengaturan PocketBase produksi (Application URL, trusted proxy, S3, backup, SMTP) diatur lewat `scripts/siapkan-pocketbase.mjs` (idempoten, membaca env), bukan klik manual. Lihat `docs/GO-LIVE.md`.
+- Build produksi gagal dengan pesan jelas bila `PUBLIC_PB_URL`/`PUBLIC_SITE_URL` kosong (`web/scripts/cek-env-build.mjs`, dipanggil `prebuild`). Untuk build lokal pakai `BUILD_DEV=1 npm run build`.
+- IP klien selalu dari header `CF-Connecting-IP` (trusted proxy); `X-Forwarded-For` dari pengunjung tidak dipercaya. Rate limit (`cekwa.js`) memakai IP ini.
 - Route API dari browser selalu lewat `urlApi()` di `web/src/lib/api.ts` (relatif saat dev supaya lewat proxy Vite).
 - Link lacak J&T hanya dari `linkLacakJNT()` (`pb_hooks/bersama.js` dan `web/src/lib/lacak.ts`, dijaga sama oleh test).
 - Nilai contoh yang wajib diganti sebelum go-live ditandai `TODO(go-live)` (terutama `web/src/config.ts`).

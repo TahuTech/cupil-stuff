@@ -28,8 +28,10 @@ Database produksi **mulai kosong**. Jangan menyalin `pocketbase/pb_data` dari ko
   Skrip menolak jalan bila `pb_data` sudah berisi data, menjalankan migrasi (koleksi + 6 zona ongkir, **tanpa** data contoh), lalu menampilkan perintah superuser.
 - [ ] Buat superuser (kamu yang mengetik email dan password):
   ```bash
-  docker compose exec pocketbase /pb/pocketbase superuser upsert EMAIL_KAMU PASSWORD_KUAT --dir=/pb/pb_data
+  read -rp "Email superuser: " EM; read -rsp "Password: " PW; echo
+  docker compose exec -T pocketbase /pb/pocketbase superuser upsert "$EM" "$PW" --dir=/pb/pb_data; unset PW
   ```
+  (Password tidak masuk riwayat shell dan tidak tampil di layar.)
 - [ ] Buka `http://127.0.0.1:8090/_/` dari mesin homelab, login, pastikan koleksi ada dan `zona_ongkir` berisi 6 baris.
 
 ---
@@ -97,13 +99,23 @@ Tujuan: `https://api.cupilstuff.web.id/_/` hanya bisa dibuka email pemilik. **`/
 ## 5. Pengaturan PocketBase sebagai kode
 
 - [ ] Isi sisa `.env` homelab (lihat `.env.example`): `SITE_URL`, `API_URL`, `PB_ORIGINS`, `TELEGRAM_*`, `R2_*`, `SMTP_*`.
-- [ ] Jalankan skrip idempoten (boleh diulang):
+- [ ] Jalankan skrip idempoten (boleh diulang; membaca `.env` otomatis):
   ```bash
-  PB_EMAIL=EMAIL_KAMU PB_PASSWORD=PASSWORD_KUAT node scripts/siapkan-pocketbase.mjs
+  read -rp "Email superuser: " PB_EMAIL; read -rsp "Password: " PB_PASSWORD; echo
+  export PB_EMAIL PB_PASSWORD
+  node scripts/siapkan-pocketbase.mjs
+  unset PB_PASSWORD
   ```
-  Skrip mengatur: Application URL `https://api.cupilstuff.web.id`, nama aplikasi `Cupil Stuff`, trusted proxy `CF-Connecting-IP`, cek `PB_ORIGINS`, S3 ke R2 (region `auto`, force path style), backup harian 02.00 simpan 7, SMTP dari env.
+  Skrip mengatur: Application URL `https://api.cupilstuff.web.id`, nama aplikasi `Cupil Stuff`, trusted proxy `CF-Connecting-IP`, cek `PB_ORIGINS`, S3 ke R2 (region `auto`, force path style), backup harian 02.00 simpan 7 terakhir ke R2, SMTP dari env, dan peringatan login superuser aktif. Yang tidak diisi di `.env` (mis. SMTP) dilewati dan pengaturan lama dibiarkan. Nilai rahasia tidak pernah dicetak.
+- [ ] `PB_ORIGINS` di produksi **hanya** `https://cupilstuff.web.id` (tanpa localhost). CORS diatur flag `--origins` di `docker-compose.yml`, bukan lewat skrip.
 - [ ] Nyalakan ulang dengan env baru: `docker compose up -d --build`.
-- [ ] Panel admin → **Settings**: periksa Application URL, Files storage (S3 aktif), Backups (cron harian, keep 7), SMTP.
+- [ ] **Uji IP asli** (sebelum Tunnel dinyalakan, dari mesin homelab): batas percobaan per IP memakai header `CF-Connecting-IP`.
+  ```bash
+  for i in 1 2 3 4 5 6; do curl -s -o /dev/null -w "%{http_code} " -H "CF-Connecting-IP: 203.0.113.10" "http://127.0.0.1:8090/api/pesanan/CS-000000-0000?wa=9999"; done; echo
+  curl -s -o /dev/null -w "%{http_code}\n" -H "CF-Connecting-IP: 203.0.113.11" "http://127.0.0.1:8090/api/pesanan/CS-000000-0000?wa=9999"
+  ```
+  Hasil yang benar: `404 404 404 404 404 429`, lalu `404` untuk IP lain. `X-Forwarded-For` sengaja tidak dipercaya.
+- [ ] Panel admin → **Settings**: periksa Application URL, Files storage (S3 aktif), Backups (cron harian, keep 7), SMTP, dan **Superusers → Auth alerts** aktif.
 - [ ] Uji upload: buat produk/varian dengan foto, pastikan file muncul di bucket `cupilstuff-files` dan bisa dibuka lewat `cdn.cupilstuff.web.id`.
 
 ---
@@ -121,8 +133,7 @@ Tujuan: `https://api.cupilstuff.web.id/_/` hanya bisa dibuka email pemilik. **`/
   ```
   Build **gagal dengan pesan jelas** bila salah satu dari keempat variabel ini kosong atau bukan `https://` (lihat `web/scripts/cek-env-build.mjs`). Nilainya tidak pernah dicetak.
 - [ ] **Custom domains**: tambah `cupilstuff.web.id` (domain utama).
-- [ ] Tambahkan juga `www.cupilstuff.web.id`, lalu buat **Redirect Rule** (Rules → Redirect Rules):
-  dari `www.cupilstuff.web.id/*` ke `https://cupilstuff.web.id/$1` (301, permanen).
+- [ ] Alihkan `www`: di **DNS**, buat record `www` tipe **AAAA** isi `100::` dengan **Proxied** (awan oranye) — hanya sebagai pintu masuk, tidak mengarah ke server mana pun. Lalu **Rules → Redirect Rules**: jika hostname sama dengan `www.cupilstuff.web.id`, alihkan ke `https://cupilstuff.web.id` + path dan query yang sama (301, permanen).
 - [ ] Deploy, buka `https://cupilstuff.web.id`, pastikan `https://www.cupilstuff.web.id` dialihkan ke domain utama.
 - [ ] Settings → **Builds → Deploy hooks** → buat hook `katalog`. Salin URL-nya ke `PAGES_DEPLOY_HOOK` di `.env` homelab, lalu `docker compose up -d`.
 
@@ -133,7 +144,7 @@ Tujuan: `https://api.cupilstuff.web.id/_/` hanya bisa dibuka email pemilik. **`/
 - [ ] Buat bot lewat **@BotFather** (`/newbot`), simpan token ke `TELEGRAM_BOT_TOKEN`.
 - [ ] Kirim satu pesan ke bot, buka `https://api.telegram.org/bot<TOKEN>/getUpdates`, salin `chat.id` ke `TELEGRAM_CHAT_ID`.
 - [ ] Isi `API_URL=https://api.cupilstuff.web.id` supaya notifikasi memuat link ke record admin.
-- [ ] `docker compose up -d`, lalu uji dengan membuat tiket servis uji (langkah 9) → pesan Telegram harus masuk.
+- [ ] `docker compose up -d`, lalu uji dengan membuat satu tiket servis uji di `https://cupilstuff.web.id/servis` → pesan Telegram harus masuk. (Tiket uji dihapus di langkah 9.)
 
 ---
 
@@ -165,11 +176,12 @@ Notifikasi Telegram di atas dikirim **dari homelab**, jadi ikut mati saat homela
   ```
   - Halaman kembali normal dalam **±15 detik** tanpa reload (pemantauan di `web/src/lib/status-server.ts`).
   - UptimeRobot mengirim pemberitahuan **down** lalu **up**.
-- [ ] **Hapus pesanan uji** lewat admin (bulk delete di koleksi `pesanan`).
-- [ ] Jalankan skrip cek produksi, semua harus lulus:
+- [ ] **Bersihkan data uji** lewat admin. Urutan penting: pesanan uji yang sudah **lunas** dulu diubah ke `status_bayar` = **batal** (stok varian otomatis kembali), baru dihapus — menghapus pesanan lunas langsung **tidak** mengembalikan stok. Hapus juga tiket uji di `tiket_servis`. Periksa stok varian kembali seperti semula (katalog ter-build ulang otomatis).
+- [ ] Jalankan skrip cek produksi (paling akhir), tidak boleh ada yang gagal:
   ```bash
   ./scripts/cek-produksi.sh
   ```
+  Skrip meminta satu foto nyata dari katalog lewat CDN, jadi isi minimal satu produk berfoto dulu (bila belum ada, cek itu dilewati). Cek IP mengunci IP kamu untuk `/api/pesanan` selama 15 menit, jadi jalankan setelah pengujian `/bayar`.
 
 ---
 

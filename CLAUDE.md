@@ -20,7 +20,7 @@ Domain: **cupilstuff.web.id**. Subdomain: `cdn.cupilstuff.web.id` (R2 publik), `
 
 Prinsip arsitektur: **katalog, foto, dan 3D harus tetap bisa dibuka walaupun homelab mati.** Hanya pesanan baru, cek tiket, dan admin yang boleh bergantung ke homelab.
 
-Saat homelab mati, fitur yang butuh server **jatuh ke WhatsApp** (bukan error buntu): keranjang, servis, cek tiket, dan bayar menampilkan banner "Pemesanan otomatis sedang istirahat" lalu mengirim isian lewat WhatsApp. Deteksi lewat `web/src/lib/status-server.ts` (`GET /api/health`, timeout 3 detik, hasil disimpan 60 detik; juga dianggap mati bila request gagal karena jaringan/timeout/5xx — tapi **bukan** 4xx/429/galat validasi). Landing, katalog, dan halaman produk tidak menampilkan banner.
+Saat homelab mati, fitur yang butuh server **jatuh ke WhatsApp** (bukan error buntu): keranjang, servis, cek tiket, dan bayar menampilkan banner "Pemesanan otomatis sedang istirahat" lalu mengirim isian lewat WhatsApp. Deteksi lewat `web/src/lib/status-server.ts` (`GET /api/health`, timeout 3 detik, hasil disimpan 60 detik, dicek ulang tiap 15 detik selama mati; juga dianggap mati bila request gagal karena jaringan/timeout/5xx — tapi **bukan** 4xx/429/galat validasi). Landing, katalog, dan halaman produk tidak menampilkan banner.
 
 ## Struktur repo
 
@@ -49,8 +49,6 @@ web/                        proyek Astro
 | `/404` | Halaman tidak ditemukan dengan maskot |
 
 Link "kembali ke katalog" selalu ke `/katalog`, bukan `/`.
-
-Halaman `/keranjang`, `/servis`, `/cek-tiket`, dan `/bayar` memakai `lib/status-server.ts` untuk beralih ke WhatsApp. Landing, katalog, dan produk tetap statis tanpa deteksi.
 
 Build memakai `build.format: "file"` (`/katalog` → `katalog.html`). Route API khusus: `POST /api/checkout` (`pb_hooks/checkout.pb.js`), `GET /api/pesanan/{nomor}?wa=XXXX` (`pb_hooks/pesanan.api.pb.js`), `POST /api/servis` (`pb_hooks/servis.pb.js`), `GET /api/tiket/{nomor}?wa=XXXX` (`pb_hooks/tiket.pb.js`); CORS diatur lewat `PB_ORIGINS` (flag `--origins` di compose).
 

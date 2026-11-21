@@ -15,6 +15,7 @@ function dataTiket(r) {
     nama: r.getString("nama"),
     wa: r.getString("wa"),
     status: r.getString("status"),
+    status_bayar: r.getString("status_bayar"),
     cara_kirim: r.getString("cara_kirim"),
     provinsi: r.getString("provinsi"),
     perangkat_jenis: r.getString("perangkat_jenis"),

@@ -108,16 +108,16 @@ describe("hitungTagihan: selesai/dikembalikan × kurir/antar", () => {
     S.hitungTagihan({ status, cara_kirim, estimasi_biaya: 75_000, biaya_final: 80_000, ongkir_kirim_balik: 20_000, ...lain });
 
   it("selesai + kurir → biaya_final + ongkir kirim balik", () => {
-    expect(t("selesai", "kurir")).toEqual({ jenis: "servis", biaya: 80_000, ongkir_kirim_balik: 20_000, total: 100_000, perlu_bayar: true });
+    expect(t("selesai", "kurir")).toEqual({ jenis: "servis", biaya: 80_000, ongkir_kirim_balik: 20_000, total: 100_000, perlu_bayar: true, lunas: false });
   });
   it("selesai + antar → biaya_final saja (ongkir 0)", () => {
-    expect(t("selesai", "antar")).toEqual({ jenis: "servis", biaya: 80_000, ongkir_kirim_balik: 0, total: 80_000, perlu_bayar: true });
+    expect(t("selesai", "antar")).toEqual({ jenis: "servis", biaya: 80_000, ongkir_kirim_balik: 0, total: 80_000, perlu_bayar: true, lunas: false });
   });
   it("dikembalikan + kurir → HANYA ongkir kirim balik", () => {
-    expect(t("dikembalikan", "kurir")).toEqual({ jenis: "kirim_balik", biaya: 0, ongkir_kirim_balik: 20_000, total: 20_000, perlu_bayar: true });
+    expect(t("dikembalikan", "kurir")).toEqual({ jenis: "kirim_balik", biaya: 0, ongkir_kirim_balik: 20_000, total: 20_000, perlu_bayar: true, lunas: false });
   });
   it("dikembalikan + antar → tidak ada tagihan sama sekali", () => {
-    expect(t("dikembalikan", "antar")).toEqual({ jenis: "tidak_ada", biaya: 0, ongkir_kirim_balik: 0, total: 0, perlu_bayar: false });
+    expect(t("dikembalikan", "antar")).toEqual({ jenis: "tidak_ada", biaya: 0, ongkir_kirim_balik: 0, total: 0, perlu_bayar: false, lunas: false });
   });
   it("selesai tanpa biaya_final memakai estimasi", () => {
     expect(t("selesai", "antar", { biaya_final: 0 }).total).toBe(75_000);
@@ -128,7 +128,16 @@ describe("hitungTagihan: selesai/dikembalikan × kurir/antar", () => {
     expect(t("dikembalikan", "kurir", { ongkir_kirim_balik: 0 })).toMatchObject({ total: null });
   });
   it("status lain belum punya tagihan", () => {
-    for (const s of ["menunggu_perangkat", "diterima", "dicek", "menunggu_persetujuan", "dikerjakan", "dikirim"]) expect(t(s, "kurir")).toBeNull();
+    for (const s of ["menunggu_perangkat", "diterima", "dicek", "menunggu_persetujuan", "dikerjakan"]) expect(t(s, "kurir")).toBeNull();
+  });
+  it("tagihan tetap tercatat setelah perangkat dikirim balik", () => {
+    expect(t("dikirim", "kurir")).toMatchObject({ jenis: "servis", total: 100_000 });
+  });
+  it("status_bayar lunas → lunas, tidak perlu bayar lagi", () => {
+    const lunas = S.hitungTagihan({ status: "selesai", status_bayar: "lunas", cara_kirim: "kurir", estimasi_biaya: 0, biaya_final: 80_000, ongkir_kirim_balik: 20_000 });
+    expect(lunas).toMatchObject({ total: 100_000, lunas: true, perlu_bayar: false });
+    const kb = S.hitungTagihan({ status: "dikembalikan", status_bayar: "lunas", cara_kirim: "kurir", ongkir_kirim_balik: 20_000 });
+    expect(kb).toMatchObject({ total: 20_000, lunas: true, perlu_bayar: false });
   });
 });
 
@@ -152,7 +161,7 @@ describe("linkWA (field url terhitung untuk pemilik toko)", () => {
   const teks = (url: string) => decodeURIComponent(url.split("?text=")[1] ?? "");
 
   it("belum ada yang berlaku saat menunggu perangkat", () => {
-    expect(S.linkWA(t(), opsi)).toEqual({ link_wa_diterima: "", link_wa_estimasi: "", link_wa_selesai: "", link_wa_resi: "" });
+    expect(S.linkWA(t(), opsi)).toEqual({ link_wa_diterima: "", link_wa_estimasi: "", link_wa_selesai: "", link_wa_lunas: "", link_wa_resi: "" });
   });
   it("diterima → link ke nomor pembeli dengan nomor tiket dan tautan cek-tiket", () => {
     const l = S.linkWA(t({ status: "diterima" }), opsi);
@@ -169,6 +178,11 @@ describe("linkWA (field url terhitung untuk pemilik toko)", () => {
     expect(teks(S.linkWA(t({ status: "selesai", biaya_final: 80_000 }), opsi).link_wa_selesai)).toContain("Total: *Rp 100.000*");
     expect(teks(S.linkWA(t({ status: "dikembalikan", cara_kirim: "antar" }), opsi).link_wa_selesai)).toContain("Tidak ada biaya");
     expect(S.linkWA(t({ status: "selesai", biaya_final: 0, estimasi_biaya: 0 }), opsi).link_wa_selesai).toBe("");
+  });
+  it("lunas → link_wa_lunas dengan total; belum lunas → kosong", () => {
+    expect(teks(S.linkWA(t({ status: "selesai", biaya_final: 80_000, status_bayar: "lunas" }), opsi).link_wa_lunas)).toContain("Rp 100.000");
+    expect(S.linkWA(t({ status: "selesai", biaya_final: 80_000, status_bayar: "belum" }), opsi).link_wa_lunas).toBe("");
+    expect(S.linkWA(t({ status: "dikirim", biaya_final: 80_000 }), opsi).link_wa_selesai).not.toBe("");
   });
   it("resi → link pelacakan", () => {
     expect(teks(S.linkWA(t({ status: "dikirim", resi: "JX123" }), opsi).link_wa_resi)).toContain("JX123");

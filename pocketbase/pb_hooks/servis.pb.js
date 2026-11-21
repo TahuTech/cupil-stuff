@@ -61,6 +61,7 @@ routerAdd(
     r.set("provinsi", v.data.provinsi);
     if (jasaId) r.set("jasa", jasaId);
     r.set("status", "menunggu_perangkat");
+    r.set("status_bayar", "belum");
 
     // semua foto sekaligus (set berulang hanya menyimpan foto terakhir)
     if (daftarFoto.length) r.set("foto", daftarFoto);

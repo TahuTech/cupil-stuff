@@ -63,6 +63,7 @@ import { TOKO } from "../config";
     ongkir_kirim_balik: number | null;
     total: number | null;
     perlu_bayar: boolean;
+    lunas: boolean;
   };
   type DetailTiket = {
     nomor: string;
@@ -173,6 +174,11 @@ import { TOKO } from "../config";
     }, "image/png");
   }
 
+  /** Tagihan sudah ditandai lunas oleh pemilik toko: tanpa QR. */
+  function sudahDibayar(total?: number | null) {
+    return el("p", "lunas", total ? `✅ Sudah dibayar (${rupiah(total)}). Terima kasih!` : "✅ Sudah dibayar. Terima kasih!");
+  }
+
   function baris(dt: string, dd: string, kelas = "") {
     const div = el("div", kelas);
     div.append(el("dt", "", dt), el("dd", "", dd));
@@ -218,12 +224,14 @@ import { TOKO } from "../config";
       dl.append(baris("Ongkir kirim balik", tg.ongkir_kirim_balik === 0 ? "– (ambil langsung)" : tg.ongkir_kirim_balik !== null ? rupiah(tg.ongkir_kirim_balik) : "dikabari via WhatsApp"));
       if (tg.total !== null) dl.append(baris("Total", rupiah(tg.total), "total"));
       isi.push(dl);
-      if (tg.total !== null && tg.total > 0) isi.push(...bagianBayar(tg.total, tk.nomor, "servis"));
+      if (tg.lunas) isi.push(sudahDibayar());
+      else if (tg.total !== null && tg.total > 0) isi.push(...bagianBayar(tg.total, tk.nomor, "servis"));
       else isi.push(el("p", "info", "Total tagihan akan kami kabari lewat WhatsApp."));
     } else if (tg && tg.jenis === "kirim_balik") {
       isi.push(el("h2", "", "Ongkir kirim balik"));
       isi.push(el("p", "info", "Estimasi tidak disetujui, jadi tidak ada biaya servis. Kamu hanya membayar ongkir kirim balik."));
-      if (tg.total !== null && tg.total > 0) isi.push(...bagianBayar(tg.total, tk.nomor, "ongkir kirim balik"));
+      if (tg.lunas) isi.push(sudahDibayar(tg.total));
+      else if (tg.total !== null && tg.total > 0) isi.push(...bagianBayar(tg.total, tk.nomor, "ongkir kirim balik"));
       else isi.push(el("p", "info", "Ongkir kirim balik akan kami kabari lewat WhatsApp."));
     } else if (tg && tg.jenis === "tidak_ada") {
       isi.push(el("h2", "", "Tidak ada tagihan"));
@@ -336,6 +344,7 @@ import { TOKO } from "../config";
   #bagian-biaya :global(button.tombol) { font: inherit; font-weight: 600; cursor: pointer; }
   /* elemen di bawah dibuat lewat JS, jadi perlu :global */
   #bagian-biaya :global(h2) { margin: 0; font-size: 1.05rem; }
+  #bagian-biaya :global(.lunas) { margin: 0; padding: 12px 14px; border-radius: 10px; background: #e6f4ea; color: #1a7f37; font-weight: 700; }
   #bagian-biaya :global(.tombol.tolak) { background: var(--card); color: var(--text); border: 1px solid var(--line); }
   @media (max-width: 480px) { h1 { font-size: 1.25rem; } }
 </style>

@@ -42,6 +42,7 @@ routerAdd("GET", "/api/tiket/{nomor}", (e) => {
   return e.json(200, S.responsPublik({
     nomor: tk.getString("nomor"),
     status: tk.getString("status"),
+    status_bayar: tk.getString("status_bayar"),
     perangkat: tk.getString("perangkat"),
     cara_kirim: tk.getString("cara_kirim"),
     estimasi_biaya: tk.getInt("estimasi_biaya"),

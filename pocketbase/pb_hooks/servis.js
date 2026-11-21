@@ -139,25 +139,28 @@ function ongkirKirimBalik(cara_kirim, provinsi, perangkat_jenis, zona) {
 
 /**
  * Tagihan untuk pembeli, sesuai status:
- * - selesai: biaya servis (biaya_final, atau estimasi jika final belum diisi) + ongkir kirim balik (0 jika antar)
+ * - selesai / dikirim: biaya servis (biaya_final, atau estimasi jika final belum diisi) + ongkir kirim balik
+ *   (0 jika antar). Tagihan tetap tercatat setelah perangkat dikirim balik.
  * - dikembalikan (estimasi ditolak): HANYA ongkir kirim balik; antar langsung = tidak ada tagihan
  * - status lain: null (belum ada tagihan)
  * Bagian yang belum diketahui bernilai null dan total ikut null ("dikabari via WhatsApp").
- * t: { status, cara_kirim, estimasi_biaya, biaya_final, ongkir_kirim_balik }
+ * lunas: true jika pemilik toko sudah menandai status_bayar = "lunas".
+ * t: { status, status_bayar, cara_kirim, estimasi_biaya, biaya_final, ongkir_kirim_balik }
  */
 function hitungTagihan(t) {
+  const lunas = t.status_bayar === "lunas";
   const kurir = t.cara_kirim !== "antar";
   // untuk kurir, 0 berarti ongkir kirim balik belum diisi
   const ongkirKB = kurir ? (t.ongkir_kirim_balik > 0 ? t.ongkir_kirim_balik : null) : 0;
 
   if (t.status === "dikembalikan") {
-    if (!kurir) return { jenis: "tidak_ada", biaya: 0, ongkir_kirim_balik: 0, total: 0, perlu_bayar: false };
-    return { jenis: "kirim_balik", biaya: 0, ongkir_kirim_balik: ongkirKB, total: ongkirKB, perlu_bayar: true };
+    if (!kurir) return { jenis: "tidak_ada", biaya: 0, ongkir_kirim_balik: 0, total: 0, perlu_bayar: false, lunas: false };
+    return { jenis: "kirim_balik", biaya: 0, ongkir_kirim_balik: ongkirKB, total: ongkirKB, perlu_bayar: !lunas, lunas: lunas };
   }
-  if (t.status === "selesai") {
+  if (t.status === "selesai" || t.status === "dikirim") {
     const biaya = t.biaya_final > 0 ? t.biaya_final : t.estimasi_biaya > 0 ? t.estimasi_biaya : null;
     const total = biaya !== null && ongkirKB !== null ? biaya + ongkirKB : null;
-    return { jenis: "servis", biaya: biaya, ongkir_kirim_balik: ongkirKB, total: total, perlu_bayar: true };
+    return { jenis: "servis", biaya: biaya, ongkir_kirim_balik: ongkirKB, total: total, perlu_bayar: !lunas, lunas: lunas };
   }
   return null;
 }
@@ -185,13 +188,13 @@ function rp(n) {
  * opsi: { toko, situs }  (situs: alamat katalog, untuk tautan /cek-tiket)
  */
 function linkWA(t, opsi) {
-  const kosong = { link_wa_diterima: "", link_wa_estimasi: "", link_wa_selesai: "", link_wa_resi: "" };
+  const kosong = { link_wa_diterima: "", link_wa_estimasi: "", link_wa_selesai: "", link_wa_lunas: "", link_wa_resi: "" };
   const wa = String(t.wa || "").replace(/\D/g, "");
   if (!t.nomor || !wa) return kosong;
   const halo = "Halo " + (t.nama || "Kak") + ",\n\n";
   const cek = "\n\nCek status kapan saja: " + opsi.situs.replace(/\/$/, "") + "/cek-tiket?nomor=" + encodeURIComponent(t.nomor) + " (pakai 4 digit terakhir nomor WhatsApp ini).";
   const ke = function (pesan) { return "https://wa.me/" + wa + "?text=" + encodeURIComponent(pesan); };
-  const hasil = { link_wa_diterima: "", link_wa_estimasi: "", link_wa_selesai: "", link_wa_resi: "" };
+  const hasil = { link_wa_diterima: "", link_wa_estimasi: "", link_wa_selesai: "", link_wa_lunas: "", link_wa_resi: "" };
 
   if (t.status && t.status !== "menunggu_perangkat") {
     hasil.link_wa_diterima = ke(halo + "Perangkat untuk tiket servis *" + t.nomor + "* sudah kami terima. Kami cek dulu (gratis), lalu kami kabari estimasi biayanya sebelum dikerjakan." + cek);
@@ -218,6 +221,11 @@ function linkWA(t, opsi) {
       rinci += "\nTotal: *" + rp(tagihan.total) + "*";
     }
     hasil.link_wa_selesai = ke(halo + rinci + "\n\nBayar lewat QRIS di halaman cek tiket, lalu kirim bukti bayar ke WhatsApp ini." + cek);
+  }
+
+  if (tagihan && tagihan.lunas && tagihan.total !== null && tagihan.total > 0) {
+    hasil.link_wa_lunas = ke(halo + "Pembayaran untuk tiket *" + t.nomor + "* sebesar *" + rp(tagihan.total) + "* sudah kami terima ✅\n\n" +
+      (t.cara_kirim === "antar" ? "Perangkat bisa diambil sesuai janji temu." : "Perangkat segera kami kirim balik; nomor resi kami kabari setelah dikirim.") + "\n\nTerima kasih!");
   }
 
   const resi = String(t.resi || "").trim();

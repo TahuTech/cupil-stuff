@@ -81,7 +81,11 @@ import { TOKO } from "../config";
         el("h2", "", "Langkah berikutnya"),
         el("p", "info", `${ps.alasan_konfirmasi || "Ongkir dikonfirmasi via WhatsApp"}. Kami kirim total akhir dan cara bayar lewat WhatsApp.`),
         tombolWA("Konfirmasi ongkir via WhatsApp", `Halo ${TOKO.nama}, saya membuat pesanan ${ps.nomor} (total barang ${total}, dikirim ke ${ps.provinsi}). Mohon info ongkirnya.`),
+        el("p", "info", `Setelah ongkir dikonfirmasi, kamu bisa mengecek dan membayar di halaman bayar:`),
       );
+      const linkBayar = el("a", "tombol utama", "Cek halaman bayar");
+      linkBayar.href = `/bayar?nomor=${encodeURIComponent(ps.nomor)}`;
+      bayar.appendChild(linkBayar);
       return;
     }
 
@@ -124,6 +128,12 @@ import { TOKO } from "../config";
       langkah,
       tombolWA("Kirim bukti bayar via WhatsApp", pesanBukti),
     );
+    // Link ke halaman /bayar untuk mengecek status nanti
+    const linkBayar = el("p", "info", "Nanti, cek status pembayaran dan resi di halaman bayar:");
+    bayar.appendChild(linkBayar);
+    const btnBayar = el("a", "tombol utama", "Cek halaman bayar");
+    btnBayar.href = `/bayar?nomor=${encodeURIComponent(ps.nomor)}`;
+    bayar.appendChild(btnBayar);
   }
 
   const $ = (id: string) => document.getElementById(id)!;

@@ -39,12 +39,13 @@ web/                        proyek Astro
 | `/produk/[kode]` | Detail produk: galeri, 3D + warna, varian, jumlah, pesan |
 | `/keranjang` | Keranjang (localStorage: id varian, jumlah, warna), ongkir per provinsi, form checkout |
 | `/pesanan-berhasil` | Hasil checkout: maskot senang, nomor, rincian dari server, QRIS bernominal (kecuali ongkir perlu konfirmasi), tombol kirim bukti bayar |
+| `/bayar` | Halaman cek dan bayar pesanan: masukkan nomor pesanan + 4 digit terakhir WA, tampil rincian + QRIS bernominal (atau resi jika sudah dikirim) |
 | `/servis` | Jasa servis (placeholder "segera hadir" sampai tahap 5) |
 | `/404` | Halaman tidak ditemukan dengan maskot |
 
 Link "kembali ke katalog" selalu ke `/katalog`, bukan `/`.
 
-Build memakai `build.format: "file"` (`/katalog` → `katalog.html`). Route API khusus: `POST /api/checkout` (`pb_hooks/checkout.pb.js`); CORS diatur lewat `PB_ORIGINS` (flag `--origins` di compose).
+Build memakai `build.format: "file"` (`/katalog` → `katalog.html`). Route API khusus: `POST /api/checkout` (`pb_hooks/checkout.pb.js`), `GET /api/pesanan/{nomor}?wa=XXXX` (`pb_hooks/pesanan.api.pb.js`); CORS diatur lewat `PB_ORIGINS` (flag `--origins` di compose).
 
 ## Data (koleksi PocketBase)
 

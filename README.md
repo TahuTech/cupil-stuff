@@ -122,9 +122,40 @@ Urutannya: **kategori → produk → varian**.
 1. Pembeli memasukkan barang ke keranjang (tersimpan di browser), memilih provinsi, lalu mengisi nama, WhatsApp, dan alamat.
 2. `POST /api/checkout` menghitung ulang semuanya di server (harga, stok, berat, zona, ongkir, potongan, total) dan menyimpan pesanan `CS-YYMMDD-XXXX` dengan status bayar **menunggu**.
 3. Halaman pesanan berhasil menampilkan QRIS dengan nominal total. Pembeli mengirim bukti bayar lewat WhatsApp.
-4. Pemilik mengecek mutasi, lalu mengubah status bayar menjadi **lunas** di panel admin (pengurangan stok otomatis: tahap 4).
+4. Pemilik mengecek mutasi, lalu mengubah status bayar menjadi **lunas** di panel admin (pengurangan stok otomatis).
 
 Di atas 5 kg atau provinsi tanpa zona: pesanan tetap tersimpan dengan `ongkir_konfirmasi`, QRIS tidak ditampilkan, dan pembeli diarahkan ke WhatsApp.
+
+## Panduan pemilik toko: memproses pesanan
+
+### Pesanan biasa (≤ 5 kg)
+
+1. **Cek mutasi** — Pastikan uang masuk ke rekening sesuai nominal `total` di pesanan.
+2. **Ubah status bayar → lunas** — Buka panel admin `api.<domain>/_/#/collections/pesanan`, cari pesanan, ubah `status_bayar` ke `lunas` lalu simpan. Stok otomatis berkurang.
+3. **Kemas barang** — Siapkan paket sesuai rincian `items`.
+4. **Isi resi** — Isi nomor resi J&T, lalu ubah `status_kirim` ke `dikirim`. Pembeli bisa mengecek resi di halaman `/bayar`.
+5. **Kirim info resi** — Klik `link_wa_resi` di panel admin untuk mengirim pesan WhatsApp ke pembeli (nomor resi + tautan lacak).
+
+### Pesanan di atas 5 kg (ongkir perlu konfirmasi)
+
+1. Cek berat dan alamat di pesanan.
+2. **Isi ongkir** — Tentukan ongkir manual, isi field `ongkir` di panel admin. `potongan_ongkir` dan `total` dihitung ulang otomatis, `ongkir_konfirmasi` jadi `false`.
+3. **Kirim info total** — Klik `link_wa_ongkir` untuk mengirim total akhir + link halaman `/bayar` ke pembeli.
+4. Setelah pembeli membayar, lanjutkan seperti pesanan biasa dari langkah 2.
+
+### Mengecek pembayaran (pembeli)
+
+Pembeli bisa mengecek status dan membayar lewat halaman `/bayar?nomor=CS-YYMMDD-XXXX`:
+- Masukkan 4 digit terakhir WhatsApp
+- Jika sudah lunas dan ada resi, tampil nomor resi + tautan lacak J&T
+- Jika belum lunas, tampil QRIS bernominal
+
+## Halaman /bayar
+
+Route `GET /api/pesanan/{nomor}?wa=XXXX` mengembalikan data terbatas:
+- status bayar, rincian barang, ongkir, potongan, total
+- **Tanpa** alamat, nama pembeli, dan nomor WA lengkap
+- Percobaan 4 digit WA salah: maksimal 5 kali dari IP yang sama, lalu diblokir 15 menit
 
 **Teks QRIS toko** (`PUBLIC_QRIS_STATIS`): scan stiker QRIS dengan aplikasi pembaca QR, salin teksnya (diawali `000201`), lalu isi di `web/.env` dan di environment variables Cloudflare Pages. Jangan commit nilainya. Uji dengan scan dari aplikasi bank/e-wallet sampai layar konfirmasi saja (jangan dibayar), pastikan nama toko dan nominalnya benar.
 
@@ -133,7 +164,8 @@ Di atas 5 kg atau provinsi tanpa zona: pesanan tetap tersimpan dengan `ongkir_ko
 - [x] Tahap 1: PocketBase, skema, zona ongkir, hook build ulang
 - [x] Tahap 2: landing page, katalog (cari, filter lini/kategori), halaman produk (galeri, 3D + warna, varian, stok, jumlah, pesan via WhatsApp, link marketplace)
 - [x] Tahap 3: keranjang, ongkir per zona, checkout (`POST /api/checkout`, hitung ulang di server), QRIS nominal otomatis, pesanan tersimpan
-- [ ] Tahap 4: halaman jasa servis, form + nomor tiket, cek status
+- [x] Tahap 4: konfirmasi bayar, stok otomatis, ongkir manual, link WA, halaman /bayar
+- [ ] Tahap 5: halaman jasa servis, form + nomor tiket, cek status
 
 ## Catatan
 

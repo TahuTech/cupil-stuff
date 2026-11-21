@@ -1,0 +1,220 @@
+---
+import Base from "../layouts/Base.astro";
+import Maskot from "../components/Maskot.astro";
+---
+
+<Base judul="Bayar pesanan" deskripsi="Cek dan bayar pesanan Cupil Stuff">
+  <section class="bayar" id="layar-masuk" hidden>
+    <Maskot ukuran={100} />
+    <h1>Cek pesanan</h1>
+    <p class="info">Masukkan nomor pesanan dan 4 digit terakhir nomor WhatsApp kamu.</p>
+    <form id="form-masuk" class="form" autocomplete="off">
+      <label><span>Nomor pesanan</span>
+        <input type="text" id="nomor" placeholder="CS-260101-ABCD" required maxlength={20} /></label>
+      <label><span>4 digit terakhir WA</span>
+        <input type="text" id="wa4" inputmode="numeric" pattern="\d{4}" maxlength={4}
+               placeholder="1234" required autocomplete="off" /></label>
+      <button type="submit" class="tombol utama" id="btn-cek">Cek pesanan</button>
+      <p class="galat" id="galat-masuk" hidden></p>
+    </form>
+  </section>
+
+  <section class="bayar" id="layar-pesanan" hidden>
+    <Maskot ukuran={110} senangSaatMuncul />
+    <h1 id="judul-bayar"></h1>
+    <p class="info" id="info-bayar"></p>
+    <div class="kotak"><h2>Barang</h2><ul class="rincian" id="rincian"></ul><dl id="angka"></dl></div>
+    <div class="kotak" id="bagian-bayar"></div>
+  </section>
+
+  <section class="bayar" id="layar-error" hidden>
+    <Maskot ukuran={100} />
+    <h1 id="judul-error"></h1>
+    <p id="pesan-error" class="info"></p>
+    <button class="tombol utama" id="btn-kembali">Cek pesanan lain</button>
+  </section>
+</Base>
+
+<script>
+import { rupiah } from "../lib/format";
+import { linkWA, TOKO } from "../config";
+import { qrisDenganNominal } from "../lib/qris";
+import { encode, renderSVG } from "uqr";
+
+const QRIS = (import.meta.env.PUBLIC_QRIS_STATIS || "").trim();
+const pb = (import.meta.env.PUBLIC_PB_URL || "http://127.0.0.1:8090").replace(/\/$/, "");
+
+const $ = (id) => document.getElementById(id);
+function el(tag, cls, txt) {
+  const e = document.createElement(tag);
+  if (cls) e.className = cls;
+  if (txt) e.textContent = txt;
+  return e;
+}
+
+function tampil(id) {
+  ["layar-masuk", "layar-pesanan", "layar-error"].forEach((x) => $(x).hidden = x !== id);
+}
+
+function render(ps) {
+  const sub = ps.total - ps.ongkir + ps.potongan_ongkir;
+  if (ps.status_bayar === "lunas") {
+    $("judul-bayar").textContent = "Pembayaran diterima ✅";
+    $("info-bayar").textContent = ps.resi ? "Resi sudah tersedia." : "Pesanan sedang diproses.";
+  } else if (ps.status_bayar === "batal") {
+    $("judul-bayar").textContent = "Pesanan dibatalkan";
+    $("info-bayar").textContent = "Pesanan ini sudah dibatalkan.";
+  } else {
+    $("judul-bayar").textContent = "Pesanan " + ps.nomor;
+    $("info-bayar").textContent = "Silakan selesaikan pembayaran.";
+  }
+
+  $("rincian").replaceChildren(...ps.items.map((it) => {
+    const li = document.createElement("li");
+    const kiri = document.createElement("span");
+    let l = it.nama;
+    if (it.varian_nama) l += " (" + it.varian_nama + ")";
+    if (it.warna) l += ", " + it.warna;
+    l += " × " + it.jumlah;
+    kiri.textContent = l;
+    const kanan = document.createElement("span");
+    kanan.textContent = rupiah(it.subtotal);
+    li.append(kiri, kanan);
+    return li;
+  }));
+
+  const baris = [["Subtotal", rupiah(sub)]];
+  if (ps.ongkir_konfirmasi) {
+    baris.push(["Ongkir", "dikonfirmasi via WhatsApp"]);
+  } else {
+    const zt = ps.zona ? ", " + ps.zona.nama : "";
+    baris.push(["Ongkir J&T (" + ps.berat_ditagih_kg + " kg" + zt + ")", rupiah(ps.ongkir)]);
+    if (ps.potongan_ongkir) baris.push(["Potongan ongkir", "- " + rupiah(ps.potongan_ongkir), "potongan"]);
+  }
+  baris.push([ps.ongkir_konfirmasi ? "Total barang" : "Total bayar", rupiah(ps.total), "total"]);
+
+  $("angka").replaceChildren(...baris.map(([dt, dd, cls]) => {
+    const div = document.createElement("div");
+    if (cls) div.className = cls;
+    const ddt = document.createElement("dt"); ddt.textContent = dt;
+    const ddd = document.createElement("dd"); ddd.textContent = dd;
+    div.append(ddt, ddd);
+    return div;
+  }));
+
+  const b = $("bagian-bayar");
+  if (ps.status_bayar === "lunas" && ps.resi) {
+    const a = el("a", "tombol utama", "Lacak resi J&T");
+    a.href = "https://jet.co.id/cek-resi?resi=" + encodeURIComponent(ps.resi);
+    a.target = "_blank";
+    b.replaceChildren(el("h2", "", "Resi pengiriman"), el("p", "", "No. resi: " + ps.resi), a);
+  } else if (ps.status_bayar === "lunas") {
+    b.replaceChildren(el("h2", "", "Menunggu pengiriman"), el("p", "info", "Pesanan segera dikirim."));
+  } else if (ps.ongkir_konfirmasi) {
+    const a = el("a", "tombol wa", "Hubungi via WhatsApp");
+    a.href = linkWA("Halo " + TOKO.nama + ", cek ongkir pesanan " + ps.nomor + ".");
+    a.target = "_blank";
+    b.replaceChildren(el("h2", "", "Langkah berikutnya"), el("p", "info", "Ongkir perlu dikonfirmasi dulu."), a);
+  } else if (ps.status_bayar === "menunggu") {
+    const total = rupiah(ps.total);
+    let qris = "";
+    let ok = false;
+    if (QRIS && ps.total > 0) {
+      try { qris = qrisDenganNominal(QRIS, ps.total); ok = true; } catch (e) {}
+    }
+    b.replaceChildren(el("h2", "", "Pembayaran"));
+    if (ok) {
+      b.appendChild(el("p", "nominal", total));
+      const qr = el("div", "qr");
+      qr.innerHTML = renderSVG(encode(qris, { ecc: "M", border: 4 }));
+      b.appendChild(qr);
+    }
+    b.appendChild(el("p", "langkah-bayar", "1. Scan QRIS dengan aplikasi bank/e-wallet.\n2. Bayar sesuai nominal.\n3. Kirim bukti bayar via WhatsApp."));
+    const wa = el("a", "tombol wa", "Kirim bukti bayar via WhatsApp");
+    wa.href = linkWA("Halo " + TOKO.nama + ", sudah bayar pesanan " + ps.nomor + " sebesar " + total + ". Bukti terlampir.");
+    wa.target = "_blank"; wa.rel = "noopener";
+    b.appendChild(wa);
+  }
+  tampil("layar-pesanan");
+}
+
+const p = new URLSearchParams(location.search);
+const nUrl = p.get("nomor");
+if (nUrl) { $("nomor").value = nUrl; $("wa4").focus(); }
+
+$("form-masuk").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const nomor = $("nomor").value.trim();
+  const wa4 = $("wa4").value.trim();
+  const btn = $("btn-cek");
+  const galat = $("galat-masuk");
+  if (!nomor || wa4.length !== 4 || !/^\d{4}$/.test(wa4)) {
+    galat.textContent = "Isi nomor pesanan dan 4 digit WA.";
+    galat.hidden = false;
+    return;
+  }
+  btn.disabled = true; btn.textContent = "Mengecek..."; galat.hidden = true;
+  try {
+    const r = await fetch(pb + "/api/pesanan/" + encodeURIComponent(nomor) + "?wa=" + wa4);
+    const bd = await r.json();
+    if (!r.ok) {
+      if (r.status === 429) galat.textContent = bd.pesan || "Terlalu banyak percobaan.";
+      else if (r.status === 403) galat.textContent = "4 digit terakhir tidak cocok.";
+      else if (r.status === 404) {
+        $("judul-error").textContent = "Pesanan tidak ditemukan";
+        $("pesan-error").textContent = "Periksa nomor pesanan.";
+        tampil("layar-error");
+        btn.disabled = false; btn.textContent = "Cek pesanan";
+        return;
+      } else galat.textContent = bd.pesan || "Gagal.";
+      galat.hidden = false;
+      btn.disabled = false; btn.textContent = "Cek pesanan";
+      return;
+    }
+    render(bd);
+  } catch (er) {
+    galat.textContent = "Tidak bisa terhubung ke server.";
+    galat.hidden = false;
+  }
+  btn.disabled = false; btn.textContent = "Cek pesanan";
+});
+
+$("btn-kembali").addEventListener("click", () => {
+  tampil("layar-masuk");
+  $("nomor").value = ""; $("wa4").value = "";
+});
+
+tampil("layar-masuk");
+</script>
+
+<style>
+  .bayar { display: flex; flex-direction: column; align-items: center; text-align: center; padding: 16px 0; }
+  h1 { margin: 12px 0 4px; font-size: 1.4rem; }
+  .info { margin: 0 0 16px; color: var(--muted); max-width: 42ch; }
+  .form { width: 100%; max-width: 360px; display: grid; gap: 10px; }
+  .form label { display: grid; gap: 4px; text-align: left; font-size: 0.9rem; color: var(--muted); }
+  .form label span { font-weight: 600; color: var(--text); font-size: 0.85rem; }
+  .form input { font: inherit; padding: 10px 12px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--card); letter-spacing: 0.04em; }
+  .form input:focus { border-color: var(--primary); outline: none; box-shadow: 0 0 0 3px var(--primary-alpha); }
+  #wa4 { text-align: center; font-size: 1.4rem; letter-spacing: 0.3em; max-width: 120px; justify-self: center; }
+  .galat { color: #d32f2f; font-size: 0.85rem; margin: 0; }
+  .kotak { width: 100%; max-width: 480px; margin-top: 12px; padding: 16px 18px; text-align: left; background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); }
+  .kotak h2 { margin: 0 0 10px; font-size: 1rem; }
+  .rincian { list-style: none; margin: 0 0 12px; padding: 0 0 12px; border-bottom: 1px solid var(--line); display: grid; gap: 6px; }
+  .rincian :global(li), #angka :global(div) { display: flex; justify-content: space-between; gap: 12px; }
+  .rincian :global(li span:last-child) { white-space: nowrap; }
+  #angka { margin: 0; display: grid; gap: 6px; }
+  #angka :global(dt) { color: var(--muted); }
+  #angka :global(dd) { margin: 0; font-weight: 600; text-align: right; }
+  #angka :global(.potongan dd) { color: #1a7f37; }
+  #angka :global(.total) { margin-top: 6px; padding-top: 10px; border-top: 1px solid var(--line); }
+  #angka :global(.total dt), #angka :global(.total dd) { color: var(--text); font-size: 1.15rem; font-weight: 700; }
+  #bagian-bayar { display: flex; flex-direction: column; gap: 12px; }
+  #bagian-bayar :global(h2) { margin: 0; }
+  #bagian-bayar :global(.info) { margin: 0; color: var(--muted); }
+  #bagian-bayar :global(.nominal) { margin: 0; font-size: 1.6rem; font-weight: 800; text-align: center; }
+  #bagian-bayar :global(.qr) { align-self: center; width: min(280px, 100%); background: #fff; border-radius: 12px; padding: 8px; border: 1px solid var(--line); }
+  #bagian-bayar :global(.qr svg) { display: block; width: 100%; height: auto; }
+  #bagian-bayar :global(.langkah-bayar) { margin: 4px 0 0; color: var(--muted); font-size: 0.88rem; white-space: pre-line; }
+  #btn-kembali { margin-top: 16px; }
+</style>

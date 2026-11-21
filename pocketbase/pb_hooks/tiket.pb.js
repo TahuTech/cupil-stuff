@@ -14,10 +14,15 @@ routerAdd("GET", "/api/tiket/{nomor}", (e) => {
 
   const wa4 = W.ambilWA4(e);
 
+  // IP yang sedang diblokir ditolak sebelum mencari tiket
+  const blokir = W.cekBlokir(e, "tiket");
+  if (blokir) return e.json(blokir.status, blokir.body);
+
   let tk;
   try {
     tk = e.app.findFirstRecordByData("tiket_servis", "nomor", nomor);
   } catch (_) {
+    W.gagal(e, "tiket"); // menebak nomor tiket juga dihitung sebagai percobaan gagal
     return e.json(404, { pesan: "Tiket tidak ditemukan." });
   }
 

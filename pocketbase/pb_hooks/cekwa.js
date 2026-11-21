@@ -1,48 +1,43 @@
 // Verifikasi 4 digit terakhir WA + pembatasan percobaan per IP.
 // Dipakai route GET /api/pesanan dan GET /api/tiket (keduanya butuh pola yang sama).
-// Mengembalikan { status, body } bila permintaan harus ditolak, atau null bila lolos.
 
-const MAKS_PERCOBAAN = 5;
-const DURASI_BLOKIR_MS = 15 * 60 * 1000;
+const MAKS_PERCOBAAN = 5; // percobaan gagal per jendela waktu
+const DURASI_BLOKIR_MS = 15 * 60 * 1000; // jendela hitung sekaligus lama blokir
 
-/** Ambil IP klien dari request (lewat Cloudflare Tunnel: Cf-Connecting-Ip). Port dibuang. */
+/**
+ * IP klien. Di produksi semua permintaan lewat Cloudflare Tunnel, yang mengisi header
+ * CF-Connecting-IP dengan IP asli pengunjung (nilai dari pengunjung ditimpa Cloudflare).
+ * PocketBase menyajikan header dengan kunci huruf kecil + garis bawah: "cf_connecting_ip".
+ * X-Forwarded-For sengaja TIDAK dipakai karena bisa dipalsukan pengunjung.
+ */
 function ipKlien(e) {
-  const info = e.requestInfo();
-  const h = info.headers || {};
-  const dariHeader = h["Cf-Connecting-Ip"] || h["X-Forwarded-For"] || "";
-  let ip = String(dariHeader || e.request.remoteAddr || "0.0.0.0");
-  // X-Forwarded-For bisa berisi daftar: ambil yang pertama
-  ip = ip.split(",")[0].trim();
-  // remoteAddr bisa "127.0.0.1:54321" → buang port
-  if (ip.indexOf(":") >= 0 && ip.lastIndexOf(":") > ip.lastIndexOf("]")) {
-    ip = ip.slice(0, ip.lastIndexOf(":"));
+  let ip = "";
+  try {
+    const h = e.requestInfo().headers || {};
+    ip = String(h.cf_connecting_ip || "").split(",")[0].trim();
+  } catch (_) {}
+  if (!ip) {
+    try {
+      ip = e.realIP();
+    } catch (_) {
+      ip = String(e.request.remoteAddr || "");
+      if (ip.lastIndexOf(":") > ip.lastIndexOf("]")) ip = ip.slice(0, ip.lastIndexOf(":"));
+    }
   }
   return ip || "0.0.0.0";
 }
 
-function bacaKunci(kunci) {
-  try {
-    return JSON.parse($app.store().get(kunci) || "{}");
-  } catch (_) {
-    return {};
-  }
-}
-
-/** Ambil parameter `wa` dari query string. Coba requestInfo().query dulu, lalu parsing rawQuery. */
+/** Ambil parameter `wa` dari query string. */
 function ambilWA4(e) {
-  // 1) requestInfo().query (paling andal)
   try {
-    var q = e.requestInfo().query || {};
+    const q = e.requestInfo().query || {};
     if (q.wa != null && String(q.wa) !== "") return String(q.wa).trim();
   } catch (_) {}
-  // 2) fallback: parsing rawQuery manual
-  var raw = "";
+  let raw = "";
   try {
     raw = String(e.request.url.rawQuery || "");
-  } catch (_) {
-    raw = "";
-  }
-  var m = raw.match(/(?:^|&)wa=([^&]*)/);
+  } catch (_) {}
+  const m = raw.match(/(?:^|&)wa=([^&]*)/);
   if (!m) return "";
   try {
     return decodeURIComponent(m[1]).trim();
@@ -51,39 +46,64 @@ function ambilWA4(e) {
   }
 }
 
+// ---------- hitungan percobaan gagal (fungsi murni, diuji di cekwa-hook.test.ts) ----------
+
+/** Status blokir untuk data hitungan { gagal, mulai } pada waktu `sekarang`. */
+function statusBlokir(data, sekarang) {
+  if (!data || !data.mulai || sekarang - data.mulai >= DURASI_BLOKIR_MS) return { diblokir: false, sisaMs: 0 };
+  if ((data.gagal || 0) < MAKS_PERCOBAAN) return { diblokir: false, sisaMs: 0 };
+  return { diblokir: true, sisaMs: data.mulai + DURASI_BLOKIR_MS - sekarang };
+}
+
+/** Catat satu percobaan gagal. Jendela baru dimulai jika jendela lama sudah lewat. */
+function catatGagal(data, sekarang) {
+  if (!data || !data.mulai || sekarang - data.mulai >= DURASI_BLOKIR_MS) return { gagal: 1, mulai: sekarang };
+  return { gagal: (data.gagal || 0) + 1, mulai: data.mulai };
+}
+
+function kunciIP(e, prefix) {
+  return prefix + ":gagal:" + ipKlien(e);
+}
+
+function baca(kunci) {
+  try {
+    return JSON.parse($app.store().get(kunci) || "null");
+  } catch (_) {
+    return null;
+  }
+}
+
+/** Tolak lebih awal jika IP sedang diblokir. Hasil null atau { status, body }. */
+function cekBlokir(e, prefix) {
+  const s = statusBlokir(baca(kunciIP(e, prefix)), Date.now());
+  if (!s.diblokir) return null;
+  return { status: 429, body: { pesan: "Terlalu banyak percobaan. Coba lagi " + Math.ceil(s.sisaMs / 60000) + " menit lagi." } };
+}
+
+/** Catat percobaan gagal (4 digit salah atau nomor tidak ditemukan). */
+function gagal(e, prefix) {
+  const k = kunciIP(e, prefix);
+  $app.store().set(k, JSON.stringify(catatGagal(baca(k), Date.now())));
+}
+
 /**
- * Periksa 4 digit WA untuk sebuah record.
- * record: Record PocketBase yang punya field "wa".
- * prefix: awalan kunci store, mis. "bayar" → "bayar:blok:<ip>".
- * Hasil:
- *   - null  → cocok, boleh lanjut
- *   - { status: number, body: object } → tolak (400/403/429)
+ * Periksa 4 digit WA untuk sebuah record (field "wa").
+ * Hasil null jika cocok, atau { status, body } untuk ditolak (400/403/429).
+ * Percobaan yang berhasil TIDAK mereset hitungan; hitungan habis sendiri setelah jendela waktu.
  */
 function cekWA(e, record, wa4, prefix) {
   if (!/^\d{4}$/.test(wa4)) {
     return { status: 400, body: { pesan: "Masukkan 4 digit terakhir nomor WhatsApp." } };
   }
-
-  const kunci = prefix + ":blok:" + ipKlien(e);
-  const data = bacaKunci(kunci);
-
-  if (data.sampai && Date.now() < data.sampai) {
-    const sisa = Math.ceil((data.sampai - Date.now()) / 60000);
-    return { status: 429, body: { pesan: "Terlalu banyak percobaan. Coba lagi " + sisa + " menit lagi." } };
-  }
+  const blokir = cekBlokir(e, prefix);
+  if (blokir) return blokir;
 
   const wa = String(record.getString("wa") || "").replace(/\D/g, "");
   if (wa.length < 4 || wa.slice(-4) !== wa4) {
-    const gagal = (data.gagal || 0) + 1;
-    $app.store().set(kunci, JSON.stringify({
-      gagal: gagal,
-      sampai: gagal >= MAKS_PERCOBAAN ? Date.now() + DURASI_BLOKIR_MS : 0,
-    }));
+    gagal(e, prefix);
     return { status: 403, body: { pesan: "4 digit terakhir tidak cocok." } };
   }
-
-  $app.store().remove(kunci);
   return null;
 }
 
-module.exports = { MAKS_PERCOBAAN, DURASI_BLOKIR_MS, ipKlien, ambilWA4, cekWA };
+module.exports = { MAKS_PERCOBAAN, DURASI_BLOKIR_MS, ipKlien, ambilWA4, statusBlokir, catatGagal, cekBlokir, gagal, cekWA };

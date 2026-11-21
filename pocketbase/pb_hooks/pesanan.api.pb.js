@@ -13,11 +13,16 @@ routerAdd("GET", "/api/pesanan/{nomor}", (e) => {
   const nomor = decodeURIComponent(bagian[bagian.length - 1]);
 
   const wa4 = W.ambilWA4(e);
-  // pesanan harus ada lebih dulu supaya 404 tidak memakan kuota percobaan
+
+  // IP yang sedang diblokir ditolak sebelum mencari pesanan
+  const blokir = W.cekBlokir(e, "bayar");
+  if (blokir) return e.json(blokir.status, blokir.body);
+
   let ps;
   try {
     ps = e.app.findFirstRecordByData("pesanan", "nomor", nomor);
   } catch (_) {
+    W.gagal(e, "bayar"); // menebak nomor pesanan juga dihitung sebagai percobaan gagal
     return e.json(404, { pesan: "Pesanan tidak ditemukan." });
   }
 

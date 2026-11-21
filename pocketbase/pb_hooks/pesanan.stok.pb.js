@@ -1,62 +1,40 @@
 /// <reference path="../pb_data/types.d.ts" />
 
-// =============================================================================
-// Hook stok pesanan
-// - Saat status_bayar berubah menjadi lunas: kurangi stok setiap varian
-// - Saat lunas → batal: kembalikan stok
-// - Varian pre-order tidak membatasi stok di bawah 0
-// - Perubahan stok memicu build ulang katalog
-// =============================================================================
+// Stok pesanan: berkurang saat status_bayar menjadi lunas, kembali saat lunas → batal/menunggu.
+// Urutan: periksa semua varian dulu (tolak tanpa mengubah apa pun jika ada yang kurang),
+// simpan pesanan, lalu ubah stok semua varian dalam satu transaksi.
+// Logika di pesanan.stok.js (murni, punya unit test).
 
 onRecordUpdate((e) => {
-  var baru = e.record.getString("status_bayar");
+  const K = require(`${__hooks}/pesanan.stok.js`);
+  const arah = K.arahStok(e.record.original().getString("status_bayar"), e.record.getString("status_bayar"));
+  if (arah === 0) return e.next();
 
-  // Cek status sebelumnya
-  var statusLama = "";
+  let items = [];
   try {
-    var lama = e.app.findRecordById("pesanan", e.record.id);
-    statusLama = lama.getString("status_bayar");
-  } catch (err) { e.next(); return; }
+    items = JSON.parse(e.record.getString("items") || "[]");
+  } catch (_) {}
 
-  // Hanya tangani perubahan ke/dari lunas
-  if (baru === statusLama) { e.next(); return; }
-  if (baru !== "lunas" && statusLama !== "lunas") { e.next(); return; }
-
-  var itemsStr = e.record.getString("items");
-  if (!itemsStr) { e.next(); return; }
-  var items = JSON.parse(itemsStr);
-  if (!Array.isArray(items) || items.length === 0) { e.next(); return; }
-
-  var arah = baru === "lunas" ? -1 : 1; // -1 kurangi, +1 kembalikan
-  var masalah = [];
-
-  for (var i = 0; i < items.length; i++) {
-    var it = items[i];
-    if (!it.varian || !it.jumlah) continue;
+  const varian = {};
+  for (const it of items) {
+    if (!it || !it.varian || varian[it.varian]) continue;
     try {
-      var v = e.app.findRecordById("varian", it.varian);
-      var stokSekarang = v.getInt("stok");
-      var preorder = v.getBool("preorder");
-      var stokBaru = stokSekarang + arah * it.jumlah;
+      const v = e.app.findRecordById("varian", it.varian);
+      varian[it.varian] = { stok: v.getInt("stok"), preorder: v.getBool("preorder") };
+    } catch (_) {} // varian sudah dihapus
+  }
 
-      if (arah === -1 && !preorder && stokBaru < 0) {
-        var kode = v.getString("kode") || it.varian;
-        var nama = it.nama || kode;
-        masalah.push(nama + ": stok tinggal " + stokSekarang + ", butuh " + it.jumlah);
-        continue;
-      }
+  const rencana = K.rencanaStok(items, varian, arah);
+  if (!rencana.ok) throw new BadRequestError("Stok tidak cukup: " + rencana.masalah.join("; ") + ". Status bayar tidak diubah.");
 
-      v.set("stok", stokBaru);
-      e.app.save(v);
-    } catch (err) {
-      if (err instanceof BadRequestError) throw err;
+  e.next(); // simpan pesanan dulu
+
+  e.app.runInTransaction((tx) => {
+    for (const p of rencana.perubahan) {
+      const v = tx.findRecordById("varian", p.id);
+      v.set("stok", p.stok);
+      tx.save(v);
     }
-  }
-
-  if (masalah.length > 0) {
-    throw new BadRequestError("Stok tidak cukup: " + masalah.join("; "));
-  }
-
-  require(__hooks + "/deploy.js").triggerBuild();
-  e.next();
+  });
+  require(`${__hooks}/deploy.js`).triggerBuild();
 }, "pesanan");

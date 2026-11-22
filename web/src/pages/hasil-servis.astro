@@ -1,0 +1,135 @@
+---
+// /hasil-servis: galeri portofolio sebelum/sesudah (filter mouse/keyboard dari keterangan)
+// dan ulasan servis. Dipisah dari /servis agar galeri portofolio tidak terlalu panjang.
+import Base from "../layouts/Base.astro";
+import KartuUlasan from "../components/KartuUlasan.astro";
+import { TOKO } from "../config";
+import { ambilPortofolio, ambilUlasanServis, rataBintang } from "../lib/pb";
+import { teksPolos } from "../lib/format";
+
+const [portofolio, ulasan] = await Promise.all([ambilPortofolio(), ambilUlasanServis()]);
+
+// Filter mouse/keyboard: jenis perangkat dideteksi dari judul/keterangan portofolio.
+// (Portofolio tidak punya field perangkat; kata kunci diambil dari teksnya.)
+function jenisPortofolio(p: { judul: string; keterangan: string }): "mouse" | "keyboard" {
+  const t = `${p.judul} ${p.keterangan}`.toLowerCase();
+  if (/keyboard|keychron|switch|tombol papan|mechanical keyboard/.test(t)) return "keyboard";
+  return "mouse";
+}
+const portofolioBerjenis = portofolio.map((p) => ({ ...p, jenis: jenisPortofolio(p) }));
+---
+<Base judul="Hasil servis" deskripsi={`Galeri servis mouse dan keyboard mechanical di ${TOKO.kota}, sebelum dan sesudah.`}>
+  <section class="judul">
+    <p class="kembali"><a href="/servis">← Servis</a></p>
+    <h1>Hasil servis</h1>
+    <p>Portofolio perbaikan mouse dan keyboard mechanical. Sebelum dan sesudah dikerjakan.</p>
+  </section>
+
+  {portofolioBerjenis.length > 0 && (
+    <section class="portofolio" aria-labelledby="judul-portofolio">
+      <div class="kepala-bagian">
+        <h2 id="judul-portofolio">Sebelum &amp; sesudah</h2>
+        <div class="filter" id="filter-portofolio" role="group" aria-label="Filter perangkat">
+          <button type="button" class="chip aktif" data-jenis="">Semua</button>
+          <button type="button" class="chip" data-jenis="mouse">Mouse</button>
+          <button type="button" class="chip" data-jenis="keyboard">Keyboard</button>
+        </div>
+      </div>
+      <div class="grid-portofolio" id="grid-portofolio">
+        {portofolioBerjenis.map((p) => (
+          <figure class="kartu-portofolio" data-jenis={p.jenis}>
+            <div class="pasangan">
+              {p.fotoSebelum ? <img src={p.fotoSebelum} alt={`Sebelum: ${p.judul}`} loading="lazy" /> : <div class="kosong">sebelum</div>}
+              {p.fotoSesudah ? <img src={p.fotoSesudah} alt={`Sesudah: ${p.judul}`} loading="lazy" /> : <div class="kosong">sesudah</div>}
+            </div>
+            <figcaption>
+              <b>{p.judul}</b>
+              {p.keterangan && <span>{teksPolos(p.keterangan, 120)}</span>}
+            </figcaption>
+          </figure>
+        ))}
+      </div>
+      <p class="kosong" id="kosong-portofolio" hidden>Belum ada portofolio untuk jenis ini.</p>
+    </section>
+  )}
+
+  {ulasan.length > 0 && (
+    <section class="ulasan" aria-labelledby="judul-ulasan">
+      <div class="kepala-bagian">
+        <h2 id="judul-ulasan">Kata pembeli</h2>
+        {ulasan.length >= 3 && (
+          <span class="rata" title={`Rata-rata ${rataBintang(ulasan)} dari 5`}>
+            ⭐ {String(rataBintang(ulasan)).replace(".", ",")} <span class="dari">/ 5</span>
+          </span>
+        )}
+      </div>
+      <div class="grid-ulasan">
+        {ulasan.map((u) => (
+          <KartuUlasan ulasan={u} />
+        ))}
+      </div>
+    </section>
+  )}
+
+  {portofolioBerjenis.length === 0 && ulasan.length === 0 && (
+    <section class="kosong-semua">
+      <p>Belum ada hasil servis yang ditampilkan. <a href="/servis">Ajukan servis →</a></p>
+    </section>
+  )}
+</Base>
+
+<script>
+  const filter = document.getElementById("filter-portofolio");
+  const kartu = [...document.querySelectorAll<HTMLElement>("#grid-portofolio .kartu-portofolio")];
+  const kosong = document.getElementById("kosong-portofolio");
+  function saring(jenis: string) {
+    let tampil = 0;
+    for (const k of kartu) {
+      const cocok = !jenis || k.dataset.jenis === jenis;
+      k.hidden = !cocok;
+      if (cocok) tampil++;
+    }
+    if (kosong) kosong.hidden = tampil > 0;
+  }
+  filter?.addEventListener("click", (e) => {
+    const b = (e.target as HTMLElement).closest<HTMLButtonElement>("button");
+    if (!b) return;
+    filter.querySelectorAll("button").forEach((x) => x.classList.toggle("aktif", x === b));
+    saring(b.dataset.jenis ?? "");
+  });
+</script>
+
+<style>
+  .judul { padding: 8px 0 4px; }
+  .kembali { margin: 0 0 8px; }
+  .kembali a { color: var(--muted); text-decoration: none; }
+  .judul h1 { margin: 0 0 6px; font-size: 1.6rem; }
+  .judul p { margin: 0; color: var(--muted); }
+
+  .portofolio, .ulasan { padding: 24px 0 0; }
+  .kepala-bagian { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; margin-bottom: 14px; }
+  .kepala-bagian h2 { margin: 0; font-size: 1.25rem; }
+  .kepala-bagian a { color: var(--accent); font-weight: 600; text-decoration: none; }
+  .rata { color: var(--muted); font-weight: 600; white-space: nowrap; }
+  .rata .dari { color: var(--muted); font-weight: 400; font-size: 0.85rem; }
+
+  .filter { display: flex; flex-wrap: wrap; gap: 8px; }
+  .filter :global(.chip) { cursor: pointer; font: inherit; font-size: 0.85rem; }
+  .filter :global(.chip.aktif) { background: var(--text); color: #fff; border-color: var(--text); }
+
+  .grid-portofolio { display: grid; gap: 16px; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); }
+  .kartu-portofolio { margin: 0; background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; }
+  .pasangan { display: grid; grid-template-columns: 1fr 1fr; }
+  .pasangan img, .pasangan .kosong { width: 100%; aspect-ratio: 1 / 1; object-fit: cover; display: flex; align-items: center; justify-content: center; color: var(--muted); background: #efeeea; font-size: 0.8rem; }
+  .kartu-portofolio figcaption { display: flex; flex-direction: column; gap: 2px; padding: 10px 12px; }
+  .kartu-portofolio figcaption span { color: var(--muted); font-size: 0.85rem; }
+
+  .grid-ulasan { display: grid; gap: 14px; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); }
+  .kosong { text-align: center; color: var(--muted); padding: 16px 0; }
+  .kosong-semua { padding: 24px 0; color: var(--muted); }
+  .kosong-semua a { color: var(--accent); font-weight: 600; text-decoration: none; }
+
+  @media (max-width: 559px) {
+    .kepala-bagian { flex-direction: column; align-items: flex-start; gap: 8px; }
+  }
+</style>

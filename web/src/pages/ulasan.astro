@@ -1,0 +1,277 @@
+---
+// /ulasan?t=TOKEN: halaman ulasan dari link khusus. Form bintang, komentar, foto
+// (dikecilkan di browser), nama tampil, dan centang izin tampil.
+// Menampilkan nama produk/jasa yang diulas bila token valid.
+// Pengiriman lewat POST /api/ulasan (validasi + token sekali pakai di server).
+import Base from "../layouts/Base.astro";
+import Maskot from "../components/Maskot.astro";
+import BannerServer from "../components/BannerServer.astro";
+import { TOKO } from "../config";
+---
+<Base judul="Tulis ulasan" deskripsi={`Tulis ulasan untuk ${TOKO.nama}.`}>
+  <BannerServer />
+  <section class="ulasan" id="layar-form" hidden>
+    <Maskot ukuran={110} />
+    <h1>Tulis ulasan</h1>
+    <p class="info" id="info-ulasan"></p>
+    <form id="form-ulasan" class="form" novalidate>
+      <fieldset class="bintang-field">
+        <legend>Rating</legend>
+        <div class="pilih-bintang" id="pilih-bintang" role="radiogroup" aria-label="Rating bintang">
+          {Array.from({ length: 5 }, (_, i) => (
+            <button type="button" class="bintang-btn" data-nilai={i + 1} role="radio" aria-checked="false" aria-label={`${i + 1} bintang`}>
+              <span aria-hidden="true">★</span>
+            </button>
+          ))}
+        </div>
+        <small class="galat" data-untuk="bintang"></small>
+      </fieldset>
+
+      <label class="kolom">
+        <span>Ulasan <em>(opsional, maks 500)</em></span>
+        <textarea id="komentar" name="komentar" rows="4" maxlength="500"
+          placeholder="Ceritakan pengalamanmu…"></textarea>
+        <small class="galat" data-untuk="komentar"></small>
+      </label>
+
+      <label class="kolom">
+        <span>Foto <em>(opsional, maks 3)</em></span>
+        <input id="foto" name="foto" type="file" accept="image/jpeg,image/png,image/webp" multiple />
+        <small class="bantuan">JPG, PNG, atau WebP. Foto otomatis dikecilkan sebelum diunggah.</small>
+        <small class="galat" data-untuk="foto"></small>
+        <ul class="pratinjau" id="pratinjau-foto"></ul>
+      </label>
+
+      <label class="kolom">
+        <span>Nama tampil <em>(opsional)</em></span>
+        <input id="nama_tampil" name="nama_tampil" maxlength="60" placeholder="Nama yang tampil di ulasan" />
+        <small class="galat" data-untuk="nama_tampil"></small>
+      </label>
+
+      <label class="centang">
+        <input type="checkbox" id="izin_tampil" name="izin_tampil" checked />
+        <span>Boleh tampilkan ulasan ini di situs (dengan nama tampil di atas).</span>
+      </label>
+
+      <div class="galat-umum" id="galat-umum" role="alert" hidden></div>
+
+      <button type="submit" class="tombol utama" id="kirim">Kirim ulasan</button>
+      <p class="catatan-kirim">Ulasan akan tampil setelah disetujui pemilik toko.</p>
+    </form>
+  </section>
+
+  <section class="sukses" id="layar-sukses" hidden>
+    <Maskot ukuran={120} senangSaatMuncul />
+    <h2>Terima kasih atas ulasannya! 🙏</h2>
+    <p>Ulasanmu kami terima dan akan tampil setelah disetujui.</p>
+    <a class="tombol utama" href="/katalog">Kembali ke katalog</a>
+  </section>
+
+  <section class="layar-error" id="layar-error" hidden>
+    <Maskot ukuran={100} />
+    <h1 id="judul-error">Tautan tidak berlaku</h1>
+    <p id="pesan-error" class="info"></p>
+    <a class="tombol utama" href="/katalog">Kembali ke katalog</a>
+  </section>
+</Base>
+
+<script>
+  import { MAKS_FOTO_ULASAN, validasiUlasan, validasiPilihanFotoUlasan, type IsianUlasan, urlUlasan } from "../lib/ulasan";
+  import { kecilkanFoto } from "../lib/servis";
+  import { pantauServer, fetchServer, gagalKarenaServer, aturBannerServer } from "../lib/status-server";
+
+  function setServerMati(mati: boolean) {
+    aturBannerServer(mati);
+  }
+  pantauServer(setServerMati);
+
+  const $ = (id: string) => document.getElementById(id)!;
+
+  // token dari query ?t=TOKEN
+  const params = new URLSearchParams(location.search);
+  const token = (params.get("t") || "").trim();
+
+  const form = $("form-ulasan") as HTMLFormElement;
+  const galatUmum = $("galat-umum") as HTMLElement;
+  const tombol = $("kirim") as HTMLButtonElement;
+  const inputFoto = $("foto") as HTMLInputElement;
+  const pratinjau = $("pratinjau-foto") as HTMLElement;
+  const pilihBintang = $("pilih-bintang") as HTMLElement;
+
+  let bintang = 0;
+  const setBintang = (n: number) => {
+    bintang = n;
+    pilihBintang.querySelectorAll<HTMLButtonElement>("button").forEach((b) => {
+      const nilai = Number(b.dataset.nilai);
+      b.classList.toggle("aktif", nilai <= bintang);
+      b.setAttribute("aria-checked", String(nilai === bintang));
+    });
+    const el = document.querySelector<HTMLElement>('[data-untuk="bintang"]');
+    if (el) el.textContent = "";
+  };
+  pilihBintang.addEventListener("mouseover", (e) => {
+    const b = (e.target as HTMLElement).closest<HTMLButtonElement>("button");
+    if (!b) return;
+    const nilai = Number(b.dataset.nilai);
+    pilihBintang.querySelectorAll<HTMLButtonElement>("button").forEach((x) => x.classList.toggle("hover", Number(x.dataset.nilai) <= nilai));
+  });
+  pilihBintang.addEventListener("mouseleave", () => {
+    pilihBintang.querySelectorAll<HTMLButtonElement>("button").forEach((x) => x.classList.remove("hover"));
+  });
+  pilihBintang.addEventListener("click", (e) => {
+    const b = (e.target as HTMLElement).closest<HTMLButtonElement>("button");
+    if (b) setBintang(Number(b.dataset.nilai));
+  });
+
+  const nilai = (id: string) => (document.getElementById(id) as HTMLInputElement | HTMLTextAreaElement | null)?.value ?? "";
+  const fotoTerpilih = () => Array.from(inputFoto.files || []);
+
+  inputFoto.addEventListener("change", () => {
+    const berkas = fotoTerpilih();
+    pratinjau.replaceChildren(
+      ...berkas.slice(0, MAKS_FOTO_ULASAN).map((b) => {
+        const li = document.createElement("li");
+        const img = document.createElement("img");
+        img.src = URL.createObjectURL(b);
+        img.alt = "";
+        li.appendChild(img);
+        return li;
+      }),
+    );
+    const g = validasiPilihanFotoUlasan(berkas);
+    const el = document.querySelector<HTMLElement>('[data-untuk="foto"]');
+    if (el) el.textContent = g;
+    inputFoto.setAttribute("aria-invalid", String(!!g));
+  });
+
+  function tampilkanGalat(galat: Record<string, string>) {
+    document.querySelectorAll<HTMLElement>("[data-untuk]").forEach((el) => {
+      el.textContent = galat[el.dataset.untuk || ""] || "";
+    });
+    form.querySelectorAll<HTMLInputElement | HTMLTextAreaElement>("input, textarea").forEach((el) => {
+      el.setAttribute("aria-invalid", String(!!galat[el.name]));
+    });
+    const ada = Object.keys(galat).length > 0;
+    galatUmum.hidden = !ada;
+    galatUmum.textContent = ada ? galat.umum || "Periksa lagi isian yang ditandai merah." : "";
+  }
+
+  const isian = (): IsianUlasan => ({
+    bintang,
+    komentar: nilai("komentar"),
+    nama_tampil: nilai("nama_tampil"),
+    izin_tampil: ($("izin_tampil") as HTMLInputElement).checked,
+  });
+
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const data = isian();
+    const g = validasiUlasan(data);
+    const gFoto = validasiPilihanFotoUlasan(fotoTerpilih());
+    if (gFoto) g.foto = gFoto;
+    if (bintang === 0) g.bintang = "Pilih 1–5 bintang.";
+    tampilkanGalat(g);
+    if (Object.keys(g).length) {
+      form.querySelector<HTMLElement>(`[name="${Object.keys(g).find((k) => k !== "bintang") || "bintang"}"]`)?.focus();
+      return;
+    }
+
+    tombol.disabled = true;
+    tombol.textContent = "Mengirim…";
+    try {
+      const fd = new FormData();
+      fd.set("bintang", String(data.bintang));
+      fd.set("komentar", data.komentar);
+      fd.set("nama_tampil", data.nama_tampil);
+      fd.set("izin_tampil", data.izin_tampil ? "true" : "false");
+      for (const b of fotoTerpilih()) {
+        const kecil = await kecilkanFoto(b, 1280, 0.8);
+        fd.append("foto", new File([kecil], b.name.replace(/\.\w+$/, "") + ".jpg", { type: "image/jpeg" }));
+      }
+
+      const res = await fetchServer(urlUlasan() + "?t=" + encodeURIComponent(token), { method: "POST", body: fd });
+      const balas = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        if (res.status === 400 && balas.galat) tampilkanGalat({ ...balas.galat, umum: balas.galat.umum ?? balas.pesan });
+        else if (res.status === 413) tampilkanGalat({ foto: "Foto terlalu besar. Kurangi jumlah atau ukuran foto." });
+        else if (gagalKarenaServer(res.status)) {
+          setServerMati(true);
+          tampilkanGalat({ umum: "Server sedang tidak tersedia. Coba lagi sebentar." });
+        } else tampilkanGalat({ umum: balas.pesan ?? "Ulasan belum bisa disimpan. Coba lagi sebentar." });
+        tombol.disabled = false;
+        tombol.textContent = "Kirim ulasan";
+        return;
+      }
+      tampilkanSukses();
+    } catch {
+      setServerMati(true);
+      tampilkanGalat({ umum: "Server tidak bisa dihubungi. Coba lagi sebentar." });
+      tombol.disabled = false;
+      tombol.textContent = "Kirim ulasan";
+    }
+  });
+
+  function tampilkanSukses() {
+    $("layar-form").hidden = true;
+    $("layar-sukses").hidden = false;
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  // token dari query ?t=TOKEN
+  if (!token) {
+    $("layar-form").hidden = true;
+    $("layar-error").hidden = false;
+  } else {
+    $("layar-form").hidden = false;
+    // info produk/jasa opsional; route yang memvalidasi token (server).
+    $("info-ulasan").textContent = "Bantu kami dengan menulis ulasan singkat. Ulasanmu sangat berarti. 🙏";
+  }
+</script>
+
+<style>
+  .ulasan, .sukses, .layar-error { display: flex; flex-direction: column; align-items: center; text-align: center; padding: 16px 0; }
+  h1 { margin: 12px 0 4px; font-size: 1.4rem; }
+  h2 { margin: 12px 0 4px; font-size: 1.3rem; }
+  .info { margin: 0 0 16px; color: var(--muted); max-width: 42ch; }
+
+  .form { width: 100%; max-width: 480px; display: grid; gap: 14px; text-align: left; }
+  .form input:not([type="checkbox"]), .form textarea {
+    font: inherit; padding: 10px 12px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--card); width: 100%;
+  }
+  .form input:focus, .form textarea:focus { border-color: var(--primary); outline: none; box-shadow: 0 0 0 3px var(--primary-alpha); }
+  .form [aria-invalid="true"] { border-color: #d32f2f; }
+  .kolom { display: grid; gap: 6px; font-size: 0.9rem; }
+  .kolom > span { font-weight: 600; }
+  .kolom em { font-weight: 400; color: var(--muted); font-style: normal; }
+  .bantuan { color: var(--muted); font-size: 0.8rem; }
+  .galat { color: #d32f2f; font-size: 0.82rem; }
+  .galat:empty { display: none; }
+  .galat-umum { color: #d32f2f; font-size: 0.9rem; padding: 10px 12px; background: #fde8e7; border-radius: var(--radius); }
+
+  .bintang-field { border: 1px solid var(--line); border-radius: var(--radius); padding: 12px 14px; display: grid; gap: 8px; }
+  .bintang-field legend { font-weight: 600; font-size: 0.9rem; padding: 0 4px; }
+  .pilih-bintang { display: flex; gap: 4px; }
+  .bintang-btn {
+    font: inherit; font-size: 1.8rem; line-height: 1; cursor: pointer; background: none; border: none; padding: 0 2px;
+    color: #ddd; -webkit-text-stroke: 1px #c9c7c1;
+  }
+  .bintang-btn > span { pointer-events: none; }
+  .bintang-btn:hover, .bintang-btn.hover, .bintang-btn.aktif { color: #f5a623; -webkit-text-stroke: 1px #f5a623; }
+  .bintang-btn:focus { outline: none; }
+  .bintang-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 4px; }
+
+  .pratinjau { list-style: none; display: flex; flex-wrap: wrap; gap: 8px; margin: 4px 0 0; padding: 0; }
+  .pratinjau :global(li) { width: 64px; height: 64px; border-radius: 8px; overflow: hidden; border: 1px solid var(--line); }
+  .pratinjau :global(img) { width: 100%; height: 100%; object-fit: cover; }
+
+  .centang { display: flex; gap: 10px; align-items: flex-start; cursor: pointer; font-size: 0.9rem; }
+  .centang input { flex: none; width: 18px; height: 18px; margin: 2px 0 0; accent-color: var(--text); }
+  .centang span { display: grid; gap: 2px; }
+
+  #kirim { justify-self: start; font: inherit; font-weight: 600; cursor: pointer; }
+  .catatan-kirim { margin: 0; font-size: 0.82rem; color: var(--muted); }
+  #kirim:disabled { opacity: 0.6; cursor: default; }
+
+  .sukses { align-items: center; }
+  .sukses p { color: var(--muted); max-width: 42ch; }
+</style>

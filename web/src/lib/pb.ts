@@ -61,6 +61,20 @@ export type Portofolio = {
   keterangan: string;
 };
 
+export type Ulasan = {
+  id: string;
+  jenis: "produk" | "servis";
+  produk: string | null; // id produk (jika jenis produk)
+  jasa: string | null; // id jasa (jika jenis servis)
+  bintang: number;
+  komentar: string;
+  foto: string[]; // URL lengkap
+  namaTampil: string;
+  sumber: "situs" | "whatsapp" | "marketplace" | "lainnya";
+  terverifikasi: boolean;
+  unggulan: boolean;
+};
+
 // URL file:
 // - dev: relatif (/api/files/...), diteruskan proxy Vite ke PocketBase (lihat astro.config.mjs),
 //   supaya bisa dibuka dari HP lewat `npm run dev -- --host` walau PocketBase hanya di 127.0.0.1.
@@ -229,4 +243,58 @@ export async function ambilPortofolio(): Promise<Portofolio[]> {
     fotoSesudah: p.foto_sesudah ? fileUrl(p, p.foto_sesudah) : null,
     keterangan: p.keterangan || "",
   }));
+}
+
+// ---------- Ulasan (tahap 8) ----------
+
+// Hanya ulasan dengan status "tampil" yang boleh dibaca publik; aturan ini juga ditegakkan
+// di server (listRule/viewRule koleksi ulasan).
+// `field` membatasi field pribadi yang dikirim ke publik (tanpa relasi pesanan/tiket & token).
+
+/**
+ * Ambil ulasan yang tampil dari PocketBase.
+ * - filter: "unggulan" (untuk landing), atau { produk } / { jasa } untuk halaman tertentu.
+ * - maks: batasi jumlah (maks. 4 untuk unggulan).
+ * Foto langsung jadi URL (R2/CDN di build).
+ */
+export async function ambilUlasan(
+  pilihan: { unggulan?: boolean; produk?: string; jasa?: string } = {},
+  maks?: number,
+): Promise<Ulasan[]> {
+  const q = new URLSearchParams();
+  let filter = "status='tampil'";
+  if (pilihan.unggulan) filter += " && unggulan=true";
+  else if (pilihan.produk) filter += ` && produk='${pilihan.produk}'`;
+  else if (pilihan.jasa) filter += ` && jasa='${pilihan.jasa}'`;
+  q.set("filter", filter);
+  q.set("sort", "created");
+  const rec = await ambilSemua("ulasan", Object.fromEntries(q.entries()));
+  let hasil = rec.map((u) => ({
+    id: u.id,
+    jenis: u.jenis,
+    produk: u.produk || null,
+    jasa: u.jasa || null,
+    bintang: u.bintang || 0,
+    komentar: u.komentar || "",
+    foto: (u.foto || []).map((f: string) => fileUrl(u, f)),
+    namaTampil: u.nama_tampil || "Anonim",
+    sumber: u.sumber || "lainnya",
+    terverifikasi: !!u.terverifikasi,
+    unggulan: !!u.unggulan,
+  })) satisfies Ulasan[];
+  if (maks && hasil.length > maks) hasil = hasil.slice(0, maks);
+  return hasil;
+}
+
+/** Rata-rata bintang (dibulatkan 1 desimal) dari daftar ulasan. */
+export function rataBintang(ulasan: { bintang: number }[]): number {
+  if (!ulasan.length) return 0;
+  const total = ulasan.reduce((n, u) => n + (u.bintang || 0), 0);
+  return Math.round((total / ulasan.length) * 10) / 10;
+}
+
+/** Semua ulasan servis yang tampil (jenis = servis), untuk /servis dan /hasil-servis. */
+export async function ambilUlasanServis(): Promise<Ulasan[]> {
+  const semua = await ambilUlasan();
+  return semua.filter((u) => u.jenis === "servis");
 }

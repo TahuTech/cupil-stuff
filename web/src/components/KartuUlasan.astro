@@ -1,0 +1,65 @@
+---
+// Kartu ulasan (dipakai di landing, halaman produk, /servis, /hasil-servis).
+// Foto: URL dari R2/CDN (sudah di pb.ts), lazy-load.
+import type { Ulasan } from "../lib/pb";
+import { labelSumber, bintangTeks } from "../lib/ulasan";
+
+interface Props {
+  ulasan: Ulasan;
+  /** tampilkan nama produk/jasa yang diulas (opsional; mis. "Pisau Lipat Mini") */
+  judul?: string;
+}
+const { ulasan: u, judul } = Astro.props;
+const label = labelSumber(u.terverifikasi, u.sumber);
+---
+<article class="kartu-ulasan">
+  <div class="kepala">
+    <div class="bintang" aria-label={`${u.bintang} dari 5 bintang`} title={`${u.bintang}/5`}>
+      <span aria-hidden="true">{bintangTeks(u.bintang)}</span>
+    </div>
+    {u.terverifikasi && (
+      <span class="verifikasi" title="Pembeli terverifikasi">
+        <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M20 6 9 17l-5-5" />
+        </svg>
+      </span>
+    )}
+  </div>
+  {judul && <p class="judul">{judul}</p>}
+  {u.komentar && <p class="komentar">“{u.komentar}”</p>}
+  {u.foto.length > 0 && (
+    <div class="foto">
+      {u.foto.map((f, i) => (
+        <a href={f} target="_blank" rel="noopener">
+          <img src={f} alt={`Foto ulasan ${i + 1} dari ${u.namaTampil}`} loading="lazy" />
+        </a>
+      ))}
+    </div>
+  )}
+  <p class="nama">
+    <b>{u.namaTampil}</b>
+    <span class="sumber">{label}</span>
+  </p>
+</article>
+
+<style>
+  .kartu-ulasan {
+    display: flex; flex-direction: column; gap: 8px; padding: 16px 18px;
+    background: var(--card); border: 1px solid var(--line); border-radius: var(--radius);
+  }
+  .kepala { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+  .bintang { color: #f5a623; font-size: 1.05rem; letter-spacing: 2px; }
+  .verifikasi {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 20px; height: 20px; border-radius: 50%; background: var(--accent); color: #fff;
+  }
+  .verifikasi svg { width: 12px; height: 12px; }
+  .judul { margin: 0; font-size: 0.8rem; color: var(--accent); font-weight: 600; }
+  .komentar { margin: 0; color: var(--text); font-size: 0.95rem; }
+  .foto { display: flex; flex-wrap: wrap; gap: 6px; }
+  .foto a { display: block; width: 72px; height: 72px; border-radius: 10px; overflow: hidden; border: 1px solid var(--line); }
+  .foto img { width: 100%; height: 100%; object-fit: cover; }
+  .nama { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; margin: 0; font-size: 0.85rem; }
+  .nama b { font-weight: 600; }
+  .sumber { color: var(--muted); font-size: 0.78rem; }
+</style>

@@ -1,12 +1,16 @@
 ---
 import Base from "../layouts/Base.astro";
 import KartuProduk from "../components/KartuProduk.astro";
+import KartuUlasan from "../components/KartuUlasan.astro";
 import Maskot from "../components/Maskot.astro";
-import { ambilKatalog, pilihProdukUnggulan } from "../lib/pb";
+import { ambilKatalog, ambilUlasan, pilihProdukUnggulan } from "../lib/pb";
 import { TOKO, linkWA } from "../config";
 
 const { produk } = await ambilKatalog();
 const pilihan = pilihProdukUnggulan(produk);
+const ulasanUnggulan = await ambilUlasan({ unggulan: true }, 4); // maks. 4 ulasan unggulan
+// nama produk untuk judul ulasan (jika jenis produk)
+const namaProduk = new Map(produk.map((p) => [p.id, p.nama]));
 
 const lini = [
   {
@@ -65,6 +69,20 @@ const langkah = [
       </div>
       <div class="grid-produk">
         {pilihan.map((p) => <KartuProduk produk={p} />)}
+      </div>
+    </section>
+  )}
+
+  {ulasanUnggulan.length > 0 && (
+    <section class="bagian" aria-labelledby="judul-ulasan">
+      <h2 id="judul-ulasan">Kata pembeli</h2>
+      <div class="grid-ulasan">
+        {ulasanUnggulan.map((u) => (
+          <KartuUlasan
+            ulasan={u}
+            judul={u.jenis === "produk" && u.produk ? namaProduk.get(u.produk) : undefined}
+          />
+        ))}
       </div>
     </section>
   )}
@@ -132,6 +150,8 @@ const langkah = [
   .langkah p { margin: 0; color: var(--muted); font-size: 0.95rem; }
 
   .ongkir p { margin: 0; max-width: 60ch; }
+
+  .grid-ulasan { display: grid; gap: 14px; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); }
 
   @media (max-width: 759px) {
     .lini, .langkah { grid-template-columns: 1fr; gap: 10px; }

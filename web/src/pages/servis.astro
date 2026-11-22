@@ -4,12 +4,18 @@
 import Base from "../layouts/Base.astro";
 import Maskot from "../components/Maskot.astro";
 import BannerServer from "../components/BannerServer.astro";
+import KartuUlasan from "../components/KartuUlasan.astro";
 import { TOKO, SERVIS, linkWA } from "../config";
-import { ambilJasa, ambilPortofolio, ambilZonaOngkir } from "../lib/pb";
+import { ambilJasa, ambilPortofolio, ambilUlasanServis, ambilZonaOngkir, rataBintang } from "../lib/pb";
 import { LABEL_PERANGKAT } from "../lib/servis";
 import { rupiah, teksPolos } from "../lib/format";
 
-const [jasa, portofolio, zona] = await Promise.all([ambilJasa(), ambilPortofolio(), ambilZonaOngkir()]);
+const [jasa, portofolio, zona, ulasanServis] = await Promise.all([
+  ambilJasa(),
+  ambilPortofolio(),
+  ambilZonaOngkir(),
+  ambilUlasanServis(),
+]);
 // provinsi kirim balik dari data zona saat build (sama dengan keranjang): Kota Surabaya paling atas
 const provinsi = zona
   .flatMap((z) => z.provinsi)
@@ -32,6 +38,7 @@ const aturan = [
       <p class="lead">Double-click, scroll lompat, tombol macet, switch mati? Kami cek gratis dan kabari estimasi sebelum dikerjakan.</p>
       <div class="aksi">
         <a class="tombol utama" href="#form-servis">Ajukan servis</a>
+        <a class="tombol" href="/hasil-servis">Lihat hasil servis</a>
         <a class="tombol wa" href={linkWA(`Halo ${TOKO.nama}, saya mau tanya soal servis.`)} target="_blank" rel="noopener">Tanya dulu via WhatsApp</a>
       </div>
     </div>
@@ -84,6 +91,27 @@ const aturan = [
           </figure>
         ))}
       </div>
+    </section>
+  )}
+
+  {ulasanServis.length > 0 && (
+    <section class="ulasan" aria-labelledby="judul-ulasan">
+      <div class="kepala-bagian">
+        <h2 id="judul-ulasan">Kata pembeli</h2>
+        {ulasanServis.length >= 3 && (
+          <span class="rata" title={`Rata-rata ${rataBintang(ulasanServis)} dari 5`}>
+            ⭐ {String(rataBintang(ulasanServis)).replace(".", ",")} <span class="dari">/ 5</span>
+          </span>
+        )}
+      </div>
+      <div class="grid-ulasan">
+        {ulasanServis.slice(0, 6).map((u) => (
+          <KartuUlasan ulasan={u} />
+        ))}
+      </div>
+      <p class="tautan-hasil">
+        Lihat portofolio lengkap sebelum/sesudah di <a href="/hasil-servis">hasil servis →</a>
+      </p>
     </section>
   )}
 
@@ -361,7 +389,7 @@ const aturan = [
   .aturan li b { font-size: 0.95rem; }
   .aturan li span { color: var(--muted); font-size: 0.9rem; }
 
-  .jasa, .portofolio, .form-servis { padding: 24px 0; border-bottom: 1px solid var(--line); }
+  .jasa, .portofolio, .ulasan, .form-servis { padding: 24px 0; border-bottom: 1px solid var(--line); }
   .grid-jasa { display: grid; gap: 14px; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); }
   .kartu-jasa { padding: 16px; background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); }
   .kartu-jasa h3 { margin: 4px 0 8px; font-size: 1.05rem; }
@@ -376,6 +404,14 @@ const aturan = [
   .pasangan img, .pasangan .kosong { width: 100%; aspect-ratio: 1 / 1; object-fit: cover; display: flex; align-items: center; justify-content: center; color: var(--muted); background: #efeeea; font-size: 0.8rem; }
   .kartu-portofolio figcaption { display: flex; flex-direction: column; gap: 2px; padding: 10px 12px; }
   .kartu-portofolio figcaption span { color: var(--muted); font-size: 0.85rem; }
+
+  .kepala-bagian { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
+  .kepala-bagian a { color: var(--accent); font-weight: 600; text-decoration: none; white-space: nowrap; }
+  .rata { color: var(--muted); font-weight: 600; white-space: nowrap; }
+  .rata .dari { color: var(--muted); font-weight: 400; font-size: 0.85rem; }
+  .grid-ulasan { display: grid; gap: 14px; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); }
+  .tautan-hasil { margin: 14px 0 0; color: var(--muted); font-size: 0.9rem; }
+  .tautan-hasil a { color: var(--accent); font-weight: 600; text-decoration: none; }
 
   .form-servis .keterangan { color: var(--muted); margin: 0 0 16px; }
   #servis { display: grid; gap: 14px; max-width: 640px; }

@@ -1,15 +1,21 @@
 ---
 import Base from "../../layouts/Base.astro";
-import { ambilKatalog, type Produk } from "../../lib/pb";
+import KartuUlasan from "../../components/KartuUlasan.astro";
+import { ambilKatalog, ambilUlasan, rataBintang, type Produk } from "../../lib/pb";
 import { rupiah, teksPolos } from "../../lib/format";
 import { TOKO, LINI } from "../../config";
 
 export async function getStaticPaths() {
   const { produk } = await ambilKatalog();
-  return produk.map((p) => ({ params: { kode: p.kode }, props: { produk: p } }));
+  // ulasan produk diambil per produk (hanya yang tampil)
+  const ulasan = await ambilUlasan();
+  return produk.map((p) => ({
+    params: { kode: p.kode },
+    props: { produk: p, ulasan: ulasan.filter((u) => u.jenis === "produk" && u.produk === p.id) },
+  }));
 }
 
-const { produk: p } = Astro.props as { produk: Produk };
+const { produk: p, ulasan } = Astro.props as { produk: Produk; ulasan: import("../../lib/pb").Ulasan[] };
 const v0 = p.varian.find((v) => v.stok > 0 || v.preorder) ?? p.varian[0];
 const fotoAwal = [...v0.foto, ...p.foto];
 const dataKlien = {
@@ -124,6 +130,24 @@ const dataKlien = {
       {p.deskripsi && <div class="deskripsi" set:html={p.deskripsi} />}
     </section>
   </article>
+
+  {ulasan.length > 0 && (
+    <section class="ulasan" aria-labelledby="judul-ulasan">
+      <div class="kepala-bagian">
+        <h2 id="judul-ulasan">Ulasan produk</h2>
+        {ulasan.length >= 3 && (
+          <span class="rata" title={`Rata-rata ${rataBintang(ulasan)} dari 5`}>
+            ⭐ {String(rataBintang(ulasan)).replace(".", ",")} <span class="dari">/ 5</span>
+          </span>
+        )}
+      </div>
+      <div class="grid-ulasan">
+        {ulasan.map((u) => (
+          <KartuUlasan ulasan={u} />
+        ))}
+      </div>
+    </section>
+  )}
 
   <script type="application/json" id="data-produk" set:html={JSON.stringify(dataKlien)} />
 </Base>
@@ -328,6 +352,14 @@ const dataKlien = {
   .btn-wa.nonaktif { color: #999; border-color: #ccc; pointer-events: none; }
   .btn-mp { background: #fff; border: 1px solid var(--line); }
   .deskripsi { margin-top: 28px; padding-top: 20px; border-top: 1px solid var(--line); }
+
+  .ulasan { margin-top: 40px; padding-top: 24px; border-top: 1px solid var(--line); }
+  .kepala-bagian { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; margin-bottom: 14px; }
+  .kepala-bagian h2 { margin: 0; font-size: 1.25rem; }
+  .kepala-bagian a { color: var(--accent); font-weight: 600; text-decoration: none; }
+  .rata { color: var(--muted); font-weight: 600; white-space: nowrap; }
+  .rata .dari { color: var(--muted); font-weight: 400; font-size: 0.85rem; }
+  .grid-ulasan { display: grid; gap: 14px; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); }
 
   @media (max-width: 760px) {
     .produk { grid-template-columns: 1fr; gap: 20px; }

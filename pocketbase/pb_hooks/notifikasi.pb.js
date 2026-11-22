@@ -49,3 +49,24 @@ onRecordAfterCreateSuccess((e) => {
   }
   e.next();
 }, "tiket_servis");
+
+// Ulasan baru (dari link khusus /api/ulasan) → beri tahu pemilik untuk menyetujui.
+onRecordAfterCreateSuccess((e) => {
+  try {
+    const T = require(`${__hooks}/telegram.js`);
+    const r = e.record;
+    let komentar = "";
+    try { komentar = String(r.getString("komentar") || "").replace(/\s+/g, " ").trim(); } catch (_) {}
+    T.kirim(T.pesanUlasanBaru({
+      id: r.id,
+      jenis: r.getString("jenis"),
+      bintang: r.getInt("bintang"),
+      nama_tampil: r.getString("nama_tampil"),
+      terverifikasi: r.getBool("terverifikasi"),
+      ringkas: komentar.length > 120 ? komentar.slice(0, 117) + "…" : komentar,
+    }, $os.getenv("API_URL")));
+  } catch (err) {
+    e.app.logger().warn("Notifikasi ulasan gagal", "error", String(err));
+  }
+  e.next();
+}, "ulasan");

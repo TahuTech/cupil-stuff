@@ -28,6 +28,7 @@ function dataTiket(r) {
 
 function isiTurunan(app, r, baru) {
   const S = require(__hooks + "/servis.js");
+  const U = require(__hooks + "/ulasan.wa.js");
   const t = dataTiket(r);
 
   let hitungOngkir = baru;
@@ -50,6 +51,24 @@ function isiTurunan(app, r, baru) {
 
   const link = S.linkWA(t, { toko: "Cupil Stuff", situs: require(__hooks + "/bersama.js").situsDariEnv() });
   for (const k in link) r.set(k, link[k]);
+
+  // token ulasan: dibuat saat tiket layak (status dikirim); kedaluwarsa 30 hari → dimatikan.
+  let token = r.getString("token_ulasan");
+  if (U.layak("tiket", t.status)) {
+    const hasil = U.tokenUntuk(token, r.getString("created"), Date.now(), Math.random);
+    if (hasil.token) token = hasil.token;
+    else if (hasil.kedaluwarsa) token = "";
+    if (token !== r.getString("token_ulasan")) r.set("token_ulasan", token);
+  }
+
+  const lu = U.linkUlasanWA({
+    wa: r.getString("wa"),
+    jenis: "tiket",
+    nama: r.getString("nama"),
+    nomor: r.getString("nomor"),
+    token: token,
+  }, { toko: "Cupil Stuff", situs: require(__hooks + "/bersama.js").situsDariEnv() });
+  r.set("link_wa_ulasan", lu.link_wa_ulasan);
 }
 
 module.exports = { isiTurunan };

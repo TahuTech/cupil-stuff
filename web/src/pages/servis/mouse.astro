@@ -1,0 +1,45 @@
+---
+import PageServis, { type Faq } from "../../components/PageServis.astro";
+import { TOKO } from "../../config";
+
+const situsUrl = (import.meta.env.PUBLIC_SITE_URL || "").trim();
+
+const faq: Faq[] = [
+  {
+    q: "Berapa biaya servis mouse?",
+    a: "Mulai " + "Rp 35.000 untuk scroll encoder; ganti switch mulai Rp 50.000. Biaya pasti dikabari setelah pengecekan gratis, dan kamu menyetujui dulu sebelum dikerjakan.",
+  },
+  {
+    q: "Kenapa mouse saya double click atau klik-nya mati?",
+    a: "Umumnya karena switch di tombol kiri/kanan sudah aus atau kotor. Kami bisa ganti switch dengan yang baru.",
+  },
+  {
+    q: "Apakah bisa servis mouse wireless?",
+    a: "Bisa. Selama kerusakannya di switch, encoder, kabel, atau receiver, kami tangani. Kasus di PCB lepas juga kami periksa, biayanya dikabari dulu.",
+  },
+  {
+    q: "Berapa lama pengerjaannya?",
+    a: "Umumnya 1–2 hari setelah persetujuan estimasi, tergantung ketersediaan komponen.",
+  },
+];
+---
+<PageServis
+  perangkat="mouse"
+  label="mouse"
+  judul={`Servis Mouse · Ganti Switch, Scroll, Double Click · ${TOKO.nama} ${TOKO.kota}`}
+  deskripsi={`Servis mouse di ${TOKO.kota}: perbaiki double click, klik mati, scroll lompat, dan ganti switch/encoder. Cek gratis, garansi 7 hari.`}
+  h1="Servis mouse — double click, scroll lompat, klik mati"
+  lead="Mouse yang klik-nya doubel, scroll-nya lompat, atau tombol mati bisa dibetulin. Pengecekan gratis, kamu setujui estimasinya dulu sebelum dikerjakan."
+  situsUrl={situsUrl}
+  kerusakan={[
+    { judul: "Double click / klik ganda", isi: "Switch aus bikin sekali klik jadi dua kali. Diganti switch baru." },
+    { judul: "Klik mati / tidak responsif", isi: "Tombol kadang tidak terbaca saat ditekan." },
+    { judul: "Scroll lompat", isi: "Scroll melompat atau berat karena encoder/scroll wheel kotor atau aus." },
+    { judul: "Ganti switch mouse", isi: "Kiri/kanan/middle, dengan jenis switch sesuai selera kamu." },
+    { judul: "Ganti encoder scroll", isi: "Scroll wheel yang sudah ngelonggar atau tidak presisi." },
+    { judul: "Kabel / kaki / receiver", isi: "Kabel putus, kaki mouse aus, atau masalah koneksi wireless." },
+  ]}
+  hargaMulai="Rp 35.000"
+  estimasi="1–2 hari"
+  faq={faq}
+/>

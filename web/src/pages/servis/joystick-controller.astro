@@ -1,0 +1,44 @@
+---
+import PageServis, { type Faq } from "../../components/PageServis.astro";
+import { TOKO } from "../../config";
+
+const situsUrl = (import.meta.env.PUBLIC_SITE_URL || "").trim();
+
+const faq: Faq[] = [
+  {
+    q: "Apa itu analog drift (stick drift)?",
+    a: "Stick analog yang bergerak sendiri tanpa disentuh, atau karakter bergerak ke satu arah. Umumnya karena potensiometer/emosi di dalam modul analog aus atau kotor.",
+  },
+  {
+    q: "Controller apa saja yang bisa diservis?",
+    a: "Controller PC/PlayStation/Xbox dan joystick/arcade pada umumnya — termasuk ganti analog (potensiometer) dan tombol.",
+  },
+  {
+    q: "Berapa biaya servis analog?",
+    a: "Bergantung jenis controller dan kerusakannya. Biaya pastinya dikabari setelah pengecekan gratis dan kamu setujui dulu.",
+  },
+  {
+    q: "Berapa lama pengerjaannya?",
+    a: "Umumnya dikerjakan setelah persetujuan estimasi; banyak kasus selesai dalam 1–3 hari tergantung ketersediaan komponen.",
+  },
+];
+---
+<PageServis
+  perangkat="joystick-controller"
+  label="controller"
+  judul={`Servis Joystick & Controller · Perbaiki Analog Drift (Xbox/PS) · ${TOKO.nama} ${TOKO.kota}`}
+  deskripsi={`Servis joystick & controller di ${TOKO.kota}: perbaiki analog drift, ganti potensiometer, stick ngunci (Xbox, PS, PC). Cek gratis, garansi 7 hari.`}
+  h1="Servis joystick & controller — perbaiki analog drift"
+  lead="Analog yang bergerak sendiri (drift), stick ngunci, atau tombol tidak responsif bisa dibetulin. Pengecekan gratis, kamu setujui estimasinya dulu sebelum dikerjakan."
+  situsUrl={situsUrl}
+  kerusakan={[
+    { judul: "Analog drift", isi: "Stick bergerak sendiri tanpa disentuh — biasanya potensiometer aus/kotor." },
+    { judul: "Ganti potensiometer analog", isi: "Modul analog diganti agar gerakan presisi kembali." },
+    { judul: "Stick ngunci / berat", isi: "Stick terasa macet atau tidak balik dengan mulus." },
+    { judul: "Tombol tidak responsif", isi: "Button kadang tidak terbaca saat ditekan." },
+    { judul: "Controller PC / arcade joystick", isi: "Servis untuk controller PC, PlayStation, Xbox, dan joystick arcade." },
+  ]}
+  hargaMulai="Sesuai kerusakan"
+  estimasi="biasanya 1–3 hari"
+  faq={faq}
+/>

@@ -1,0 +1,44 @@
+---
+import PageServis, { type Faq } from "../../components/PageServis.astro";
+import { TOKO } from "../../config";
+
+const situsUrl = (import.meta.env.PUBLIC_SITE_URL || "").trim();
+
+const faq: Faq[] = [
+  {
+    q: "Berapa biaya servis keyboard?",
+    a: "Ganti switch mulai Rp 60.000; perbaikan tombol macet mulai Rp 40.000. Biaya pastinya dikabari setelah cek gratis dan kamu setujui dulu.",
+  },
+  {
+    q: "Keyboard mechanical apa saja yang bisa diservis?",
+    a: "Keyboard hot-swap maupun solder. Ganti switch, stabilizer berisik, tombol macet, hingga kerusakan di beberapa tombol sekaligus.",
+  },
+  {
+    q: "Tombol saya dobel ketik atau tidak terbaca, kenapa?",
+    a: "Biasanya switch-nya yang mati atau kotor. Kami bersihkan atau ganti switch-nya sesuai kondisi.",
+  },
+  {
+    q: "Berapa lama pengerjaannya?",
+    a: "Umumnya 2–3 hari setelah persetujuan estimasi, tergantung jumlah switch dan ketersediaan komponen.",
+  },
+];
+---
+<PageServis
+  perangkat="keyboard"
+  label="keyboard"
+  judul={`Servis Keyboard · Ganti Switch, Tombol Macet, Double Keting · ${TOKO.nama} ${TOKO.kota}`}
+  deskripsi={`Servis keyboard di ${TOKO.kota}: ganti switch, perbaiki tombol macet/doppel ketik, mechanical maupun solder. Cek gratis, garansi 7 hari.`}
+  h1="Servis keyboard — ganti switch, tombol macet, dobel ketik"
+  lead="Keyboard yang tombolnya macet, dobel ketik, atau switch-nya mati bisa dibetulin. Pengecekan gratis, kamu setujui estimasinya dulu sebelum dikerjakan."
+  situsUrl={situsUrl}
+  kerusakan={[
+    { judul: "Ganti switch keyboard", isi: "Switch mati, dobel, atau rasa-nya beda. Diganti sesuai keinginan." },
+    { judul: "Tombol macet", isi: "Tombol lengah atau tidak balik karena switch/stabilizer bermasalah." },
+    { judul: "Double ketik", isi: "Satu ketukan menghasilkan karakter dobel." },
+    { judul: "Stabilizer berisik", isi: "Spacebar/shift berisik atau tidak presisi, dibersihkan & dilumas." },
+    { judul: "Bersih-bersih menyeluruh", isi: "Debu dan kotoran dalam dibersihkan agar tombol nyaman dipakai." },
+  ]}
+  hargaMulai="Rp 40.000"
+  estimasi="2–3 hari"
+  faq={faq}
+/>

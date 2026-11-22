@@ -8,8 +8,9 @@ interface Props {
   deskripsi?: string;
   gambar?: string;
   pakai3D?: boolean;
+  canonical?: string;
 }
-const { judul, deskripsi = TOKO.tagline, gambar, pakai3D = false } = Astro.props;
+const { judul, deskripsi = TOKO.tagline, gambar, pakai3D = false, canonical } = Astro.props;
 // build.format "file": pathname bisa berakhiran .html (mis. /katalog.html)
 const jalur = Astro.url.pathname.replace(/\.html$/, "").replace(/\/$/, "");
 const aktif = (href: string) => (jalur === href || jalur.startsWith(`${href}/`) ? "page" : undefined);
@@ -30,6 +31,7 @@ const judulLengkap = judul ? `${judul} · ${TOKO.nama}` : `${TOKO.nama} · ${TOK
     <meta property="og:title" content={judulLengkap} />
     <meta property="og:description" content={deskripsi} />
     {gambar && <meta property="og:image" content={gambar} />}
+    {canonical && <link rel="canonical" href={canonical} />}
     {pakai3D && (
       <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/4.0.0/model-viewer.min.js"></script>
     )}

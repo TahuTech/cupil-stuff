@@ -57,7 +57,7 @@ export function validasiServis(i: IsianServis): Record<string, string> {
   const keluhan = i.keluhan.replace(/[ \t]+/g, " ").replace(/\n{3,}/g, "\n\n").trim();
   if (nama.length < 2 || nama.length > 80) g.nama = "Nama 2–80 huruf.";
   if (!normalisasiWA(i.wa)) g.wa = "Nomor WhatsApp tidak valid. Contoh: 0812 3456 7890.";
-  if (!["mouse", "keyboard", "lainnya"].includes(i.perangkat_jenis)) g.perangkat_jenis = "Pilih jenis perangkat.";
+  if (!["mouse", "keyboard", "controller", "lainnya"].includes(i.perangkat_jenis)) g.perangkat_jenis = "Pilih jenis perangkat.";
   if (perangkat.length < 2 || perangkat.length > 80) g.perangkat = "Isi merek/tipe perangkat 2–80 huruf (mis. Logitech G102).";
   if (keluhan.length < 10 || keluhan.length > 1000) g.keluhan = "Ceritakan keluhannya 10–1000 huruf.";
   if (!["kurir", "antar"].includes(i.cara_kirim)) g.cara_kirim = "Pilih cara kirim perangkat.";
@@ -79,6 +79,7 @@ export function validasiPilihanFoto(berkas: { type: string }[]): string {
 export const LABEL_PERANGKAT: Record<string, string> = {
   mouse: "Mouse",
   keyboard: "Keyboard",
+  controller: "Controller / Joystick",
   lainnya: "Lainnya",
 };
 

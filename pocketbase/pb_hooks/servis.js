@@ -17,10 +17,10 @@ const BATAS = {
   fotoBytes: 5 * 1024 * 1024, // per foto (sama dengan maxSize field foto)
 };
 
-const PERANGKAT_JENIS = ["mouse", "keyboard", "lainnya"];
+const PERANGKAT_JENIS = ["mouse", "keyboard", "controller", "lainnya"];
 
 /** Berat bawaan kirim balik per jenis perangkat (gram, sudah termasuk packing). */
-const BERAT_PERANGKAT = { mouse: 300, keyboard: 900, lainnya: 500 };
+const BERAT_PERANGKAT = { mouse: 300, keyboard: 900, controller: 700, lainnya: 500 };
 
 const CARA_KIRIM = ["kurir", "antar"];
 

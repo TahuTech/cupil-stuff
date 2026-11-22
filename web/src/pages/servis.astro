@@ -30,12 +30,12 @@ const aturan = [
   { judul: "Boleh antar dan ambil langsung", isi: SERVIS.infoAntar },
 ];
 ---
-<Base judul="Servis mouse dan keyboard" deskripsi={`Servis mouse dan keyboard mechanical di ${TOKO.kota}. Cek gratis, bayar setelah selesai.`}>
+<Base judul="Servis mouse, keyboard & controller" deskripsi={`Servis mouse, keyboard & controller di ${TOKO.kota}. Cek gratis, bayar setelah selesai.`}>
   <BannerServer />
   <section class="hero-servis">
     <div>
-      <h1>Servis mouse &amp; keyboard</h1>
-      <p class="lead">Double-click, scroll lompat, tombol macet, switch mati? Kami cek gratis dan kabari estimasi sebelum dikerjakan.</p>
+      <h1>Servis mouse, keyboard &amp; controller</h1>
+      <p class="lead">Double-click, scroll lompat, tombol macet, atau analog controller drift? Kami cek gratis dan kabari estimasi sebelum dikerjakan.</p>
       <div class="aksi">
         <a class="tombol utama" href="#form-servis">Ajukan servis</a>
         <a class="tombol" href="/hasil-servis">Lihat hasil servis</a>
@@ -43,6 +43,31 @@ const aturan = [
       </div>
     </div>
     <Maskot ukuran={130} />
+  </section>
+
+  <section class="hub" aria-labelledby="judul-hub">
+    <h2 id="judul-hub">Pilih perangkat</h2>
+    <p class="subjudul-hub">Lihat detail kerusakan dan estimasi per perangkat.</p>
+    <div class="hub-grid">
+      <a class="kartu-hub" href="/servis/mouse">
+        <span class="hub-ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="7" /><path d="M12 6v4" /></svg></span>
+        <h3>Servis mouse</h3>
+        <p>Double click, scroll lompat, klik mati, ganti switch &amp; encoder.</p>
+        <span class="hub-lanjut">Detail →</span>
+      </a>
+      <a class="kartu-hub" href="/servis/keyboard">
+        <span class="hub-ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="12" rx="2" /><path d="M6 10h4M12 10h2M6 14h12" /></svg></span>
+        <h3>Servis keyboard</h3>
+        <p>Ganti switch, tombol macet, dobel ketik, keyboard mechanical.</p>
+        <span class="hub-lanjut">Detail →</span>
+      </a>
+      <a class="kartu-hub" href="/servis/joystick-controller">
+        <span class="hub-ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 12h4M8 10v4" /><circle cx="15" cy="11" r="1.5" /><circle cx="18" cy="13" r="1.5" /><path d="M17 8l-1.5-4H8.5L7 8" /></svg></span>
+        <h3>Servis controller / joystick</h3>
+        <p>Analog drift, stick ngunci, ganti potensiometer (Xbox, PS, dll).</p>
+        <span class="hub-lanjut">Detail →</span>
+      </a>
+    </div>
   </section>
 
   <section class="aturan" aria-labelledby="judul-aturan">
@@ -133,6 +158,7 @@ const aturan = [
           <select id="perangkat_jenis" name="perangkat_jenis">
             <option value="mouse">Mouse</option>
             <option value="keyboard">Keyboard</option>
+            <option value="controller">Controller</option>
             <option value="lainnya">Lainnya</option>
           </select>
           <small class="galat" data-untuk="perangkat_jenis"></small>
@@ -278,6 +304,14 @@ const aturan = [
   }
   pantauServer(setServerMati);
 
+  // praseleksi perangkat + gulir ke form bila datang dari halaman servis khusus (mis. ?perangkat=mouse)
+  const perangkatUrl = new URLSearchParams(location.search).get("perangkat") ?? "";
+  if (["mouse", "keyboard", "controller", "lainnya"].includes(perangkatUrl)) {
+    const selPerangkat = document.getElementById("perangkat_jenis") as HTMLSelectElement | null;
+    if (selPerangkat) selPerangkat.value = perangkatUrl;
+  }
+  if (new URLSearchParams(location.search).has("perangkat")) form.scrollIntoView({ behavior: "smooth", block: "center" });
+
   const nilai = (id: string) =>
     (document.getElementById(id) as HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement | null)?.value ?? "";
   const caraKirim = () => (form.querySelector('input[name="cara_kirim"]:checked') as HTMLInputElement | null)?.value ?? "";
@@ -409,6 +443,25 @@ const aturan = [
   .hero-servis h1 { margin: 0 0 8px; font-size: 1.6rem; }
   .lead { margin: 0 0 16px; color: var(--muted); max-width: 46ch; }
   .aksi { display: flex; flex-wrap: wrap; gap: 10px; }
+
+  .hub { padding: 20px 0 24px; border-bottom: 1px solid var(--line); }
+  .hub h2 { margin: 0 0 4px; }
+  .hub .subjudul-hub { margin: 0 0 16px; color: var(--muted); }
+  .hub-grid { display: grid; gap: 14px; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); }
+  .kartu-hub {
+    display: flex; flex-direction: column; padding: 18px; background: var(--card);
+    border: 1px solid var(--line); border-radius: var(--radius); text-decoration: none;
+    box-shadow: 0 1px 2px rgba(16, 24, 40, 0.06); transition: transform 0.15s, box-shadow 0.15s, border-color 0.15s;
+  }
+  .kartu-hub:hover { transform: translateY(-2px); box-shadow: 0 6px 18px rgba(0, 0, 0, 0.08); border-color: #d7dbe2; }
+  .kartu-hub .hub-ico {
+    width: 38px; height: 38px; border-radius: 11px; margin-bottom: 10px;
+    display: grid; place-items: center; background: var(--brand-soft); color: var(--brand);
+  }
+  .kartu-hub .hub-ico :global(svg) { width: 22px; height: 22px; }
+  .kartu-hub h3 { margin: 0 0 6px; font-size: 1.05rem; }
+  .kartu-hub p { margin: 0 0 10px; color: var(--muted); font-size: 0.9rem; line-height: 1.45; }
+  .kartu-hub .hub-lanjut { color: var(--brand); font-weight: 600; font-size: 0.9rem; }
 
   .aturan { padding: 24px 0; border-bottom: 1px solid var(--line); }
   .aturan ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }

@@ -1,0 +1,152 @@
+---
+// Halaman SEO khusus per jenis servis (mouse / keyboard / controller).
+// Data disuplai tiap halaman; konten & struktur konsisten supaya mudah diindex.
+import Base from "../layouts/Base.astro";
+import { TOKO, linkWA } from "../config";
+
+export interface Kerusakan { judul: string; isi: string }
+export interface Faq { q: string; a: string }
+
+export interface Props {
+  perangkat: "mouse" | "keyboard" | "joystick-controller";
+  label: string; // "mouse", "keyboard", "controller"... untuk ?perangkat=
+  judul: string; // meta title
+  deskripsi: string; // meta description
+  h1: string;
+  lead: string;
+  situsUrl: string; // canonical + JSON-LD base
+  kerusakan: Kerusakan[];
+  hargaMulai?: string;
+  estimasi?: string;
+  faq: Faq[];
+  linkWA: string;
+}
+const { perangkat, label, judul, deskripsi, h1, lead, situsUrl, kerusakan, hargaMulai, estimasi, faq } = Astro.props as Props;
+
+const jalan = `/servis/${perangkat}`;
+const canonical = situsUrl ? `${situsUrl}${jalan}`.replace(/([^:])\/+/g, "$1/") : "";
+const layanan = kerusakan.map((k) => k.judul).join(", ");
+const struktur = {
+  "@context": "https://schema.org",
+  "@type": "Service",
+  name: judul,
+  serviceType: `Servis ${label}`,
+  description: deskripsi,
+  url: canonical,
+  areaServed: TOKO.kota,
+  provider: {
+    "@type": "LocalBusiness",
+    name: TOKO.nama,
+    description: TOKO.tagline,
+    areaServed: TOKO.kota,
+    openingHours: TOKO.jamOperasional,
+    address: { "@type": "PostalAddress", addressLocality: TOKO.kota, addressCountry: "ID" },
+  },
+  hasOfferCatalog: {
+    "@type": "OfferCatalog",
+    name: `Servis ${label}`,
+    itemListElement: kerusakan.map((k, i) => ({
+      "@type": "Offer", position: i + 1, itemOffered: { "@type": "Service", name: k.judul, description: k.isi },
+    })),
+  },
+};
+---
+<Base judul={judul} deskripsi={deskripsi} canonical={canonical || undefined}>
+  <script type="application/ld+json" set:html={JSON.stringify(struktur)} />
+  <p class="kembali"><a href="/servis">← Servis</a></p>
+
+  <header class="judul">
+    <h1>{h1}</h1>
+    <p class="lead">{lead}</p>
+  </header>
+
+  <section class="info-toko" aria-label="Info servis">
+    <div class="info-item"><b>Pengecekan</b><span>Gratis</span></div>
+    <div class="info-item"><b>Harga mulai</b><span>{hargaMulai ?? "Sesuai kerusakan"}</span></div>
+    {estimasi && <div class="info-item"><b>Estimasi</b><span>{estimasi}</span></div>}
+    <div class="info-item"><b>Garansi</b><span>7 hari</span></div>
+  </section>
+
+  <section class="bagian" aria-labelledby="judul-kerusakan">
+    <h2 id="judul-kerusakan">Kerusakan yang kami tangani</h2>
+    <ul class="daftar">
+      {kerusakan.map((k) => (
+        <li><b>{k.judul}</b><span>{k.isi}</span></li>
+      ))}
+    </ul>
+  </section>
+
+  <section class="bagian" aria-labelledby="judul-cara">
+    <h2 id="judul-cara">Cara kerjanya</h2>
+    <ol class="langkah">
+      <li><b>Ajukan servis</b><span>Isi form singkat, boleh belum tahu detailnya.</span></li>
+      <li><b>Cek gratis</b><span>Perangkat diperiksa tanpa biaya.</span></li>
+      <li><b>Estimasi</b><span>Kami kabari biaya &amp; lama pengerjaan.</span></li>
+      <li><b>Selesai</b><span>Bayar setelah selesai, garansi 7 hari.</span></li>
+    </ol>
+  </section>
+
+  <section class="bagian" aria-labelledby="judul-faq">
+    <h2 id="judul-faq">Pertanyaan umum</h2>
+    <div class="faq">
+      {faq.map((f) => (
+        <details><summary>{f.q}</summary><p>{f.a}</p></details>
+      ))}
+    </div>
+  </section>
+
+  <section class="bagian cta" aria-labelledby="judul-cta">
+    <h2 id="judul-cta">Siap {label} kamu untuk dicek?</h2>
+    <p class="lead">Isi form, kami buatkan nomor tiket untuk memantau status servis.</p>
+    <div class="aksi">
+      <a class="tombol utama" href={`/servis?perangkat=${label}#form-servis`}>Ajukan servis {label}</a>
+      <a class="tombol wa" href={linkWA(`Halo ${TOKO.nama}, saya mau tanya soal servis ${label}.`)} target="_blank" rel="noopener">Tanya via WhatsApp</a>
+    </div>
+  </section>
+</Base>
+
+<style>
+  .kembali { margin: 4px 0 16px; text-decoration: none; color: var(--muted); }
+  .kembali a { color: var(--muted); text-decoration: none; }
+  .judul h1 { margin: 0 0 8px; font-size: 1.7rem; line-height: 1.25; }
+  .lead { margin: 0; color: var(--muted); max-width: 56ch; }
+
+  .info-toko { display: flex; flex-wrap: wrap; gap: 10px; margin: 20px 0 0; }
+  .info-item {
+    background: var(--card); border: 1px solid var(--line); border-radius: var(--radius);
+    padding: 10px 16px; display: flex; flex-direction: column; gap: 2px;
+  }
+  .info-item b { font-size: 0.8rem; color: var(--muted); font-weight: 500; }
+  .info-item span { font-weight: 700; }
+
+  .bagian { padding: 26px 0 0; }
+  .bagian h2 { margin: 0 0 14px; font-size: 1.25rem; }
+
+  .daftar { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); }
+  .daftar li {
+    display: flex; flex-direction: column; gap: 4px; padding: 14px 16px;
+    background: var(--card); border: 1px solid var(--line); border-radius: var(--radius);
+    box-shadow: 0 1px 2px rgba(16, 24, 40, 0.06);
+  }
+  .daftar b { font-size: 0.95rem; }
+  .daftar span { color: var(--muted); font-size: 0.9rem; line-height: 1.45; }
+
+  .langkah { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); }
+  .langkah li { display: flex; flex-direction: column; gap: 2px; padding: 14px 16px; background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); }
+  .langkah b { font-size: 0.9rem; }
+  .langkah span { color: var(--muted); font-size: 0.85rem; line-height: 1.4; }
+
+  .faq { display: grid; gap: 10px; }
+  .faq details { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); }
+  .faq summary { cursor: pointer; list-style: none; padding: 14px 16px; font-weight: 600; }
+  .faq summary::-webkit-details-marker { display: none; }
+  .faq details p { margin: 0; padding: 0 16px 14px; color: var(--muted); line-height: 1.6; }
+
+  .cta { padding: 28px 0 0; }
+  .cta .lead { margin: 0 0 16px; }
+  .aksi { display: flex; flex-wrap: wrap; gap: 10px; }
+
+  @media (max-width: 559px) {
+    .daftar, .langkah { grid-template-columns: 1fr; }
+  }
+</style>

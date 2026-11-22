@@ -17,16 +17,19 @@ const lini = [
     judul: "Model 3D",
     teks: "Figur dan pernak-pernik cetak 3D buatan sendiri. Bisa diputar dalam 3D dan pilih warnanya.",
     href: "/katalog?lini=model3d",
+    ikon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l8 4v12l-8 4-8-4V6z"/><path d="M12 22V12"/><path d="M4 6l8 4 8-4"/></svg>',
   },
   {
     judul: "Barang EDC",
     teks: "Pisau lipat, peluit, dan perlengkapan kecil lain untuk dibawa sehari-hari.",
     href: "/katalog?lini=edc",
+    ikon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 3v5c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6z"/><path d="M9 12l2 2 4-4"/></svg>',
   },
   {
     judul: "Servis mouse dan keyboard",
     teks: "Perbaikan mouse dan keyboard mechanical. Pengecekan gratis, bayar setelah selesai.",
     href: "/servis",
+    ikon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 0 0 5.4-5.4l-2.1 2.1-2.1-2.1z"/></svg>',
   },
 ];
 
@@ -54,6 +57,7 @@ const langkah = [
     <div class="lini">
       {lini.map((l) => (
         <a class="kartu-lini" href={l.href}>
+          <span class="ico" aria-hidden="true" set:html={l.ikon} />
           <h3>{l.judul} <span aria-hidden="true">→</span></h3>
           <p>{l.teks}</p>
         </a>
@@ -104,10 +108,10 @@ const langkah = [
 
   <section class="bagian ongkir" aria-labelledby="judul-ongkir">
     <h2 id="judul-ongkir">Pengiriman</h2>
-    <p>
-      Dikirim dari {TOKO.kota} lewat J&amp;T. Ada potongan ongkir <b>Rp 5.000</b> untuk setiap
-      <b>Rp 100.000</b> belanja (paling banyak sebesar ongkirnya).
-    </p>
+    <div class="info-box">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1 3h13v13H1z"/><path d="M14 8h4l3 3v5h-7"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="17.5" cy="18.5" r="2.5"/></svg>
+      <p>Dikirim dari {TOKO.kota} lewat J&amp;T. Ada potongan ongkir <b>Rp 5.000</b> untuk setiap <b>Rp 100.000</b> belanja (paling banyak sebesar ongkirnya).</p>
+    </div>
   </section>
 </Base>
 
@@ -132,13 +136,20 @@ const langkah = [
 
   .lini { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
   .kartu-lini {
-    display: block; padding: 18px 20px; background: var(--card); border: 1px solid var(--line);
-    border-radius: var(--radius); text-decoration: none; transition: transform 0.15s, box-shadow 0.15s;
+    display: flex; flex-direction: column; gap: 6px; padding: 18px 20px;
+    background: var(--card); border: 1px solid var(--line); border-radius: var(--radius);
+    text-decoration: none; box-shadow: 0 1px 2px rgba(16, 24, 40, 0.06), 0 1px 3px rgba(16, 24, 40, 0.10);
+    transition: transform 0.15s, box-shadow 0.15s, border-color 0.15s;
   }
-  .kartu-lini:hover { transform: translateY(-2px); box-shadow: 0 6px 18px rgba(0, 0, 0, 0.08); }
-  .kartu-lini h3 { margin: 0 0 6px; font-size: 1.05rem; }
+  .kartu-lini:hover { transform: translateY(-2px); box-shadow: 0 6px 18px rgba(0, 0, 0, 0.08); border-color: #d7dbe2; }
+  .kartu-lini .ico {
+    width: 38px; height: 38px; border-radius: 11px; margin-bottom: 4px;
+    display: grid; place-items: center; background: var(--brand-soft); color: var(--brand);
+  }
+  .kartu-lini .ico :global(svg) { width: 22px; height: 22px; }
+  .kartu-lini h3 { margin: 0; font-size: 1.05rem; }
   .kartu-lini h3 span { color: var(--brand); }
-  .kartu-lini p { margin: 0; color: var(--muted); font-size: 0.95rem; }
+  .kartu-lini p { margin: 0; color: var(--muted); font-size: 0.95rem; line-height: 1.45; }
 
   .langkah { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
   .langkah li { display: flex; gap: 14px; align-items: flex-start; }
@@ -149,7 +160,14 @@ const langkah = [
   .langkah h3 { margin: 4px 0 2px; font-size: 1rem; }
   .langkah p { margin: 0; color: var(--muted); font-size: 0.95rem; }
 
-  .ongkir p { margin: 0; max-width: 60ch; }
+  .ongkir p { margin: 0; }
+  .info-box {
+    display: flex; gap: 14px; align-items: flex-start;
+    background: var(--brand-soft); border: 1px solid #dbe6ff; border-radius: var(--radius);
+    padding: 16px 18px; max-width: 60ch;
+  }
+  .info-box svg { width: 22px; height: 22px; color: var(--brand); flex: none; margin-top: 2px; }
+  .info-box b { color: var(--brand); }
 
   .grid-ulasan { display: grid; gap: 14px; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); }
 

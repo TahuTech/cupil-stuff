@@ -1,5 +1,6 @@
 ---
 import Base from "../../layouts/Base.astro";
+import KartuProduk from "../../components/KartuProduk.astro";
 import KartuUlasan from "../../components/KartuUlasan.astro";
 import { ambilKatalog, ambilUlasan, rataBintang, type Produk } from "../../lib/pb";
 import { rupiah, teksPolos } from "../../lib/format";
@@ -11,11 +12,19 @@ export async function getStaticPaths() {
   const ulasan = await ambilUlasan();
   return produk.map((p) => ({
     params: { kode: p.kode },
-    props: { produk: p, ulasan: ulasan.filter((u) => u.jenis === "produk" && u.produk === p.id) },
+    props: {
+      produk: p,
+      related: produk.filter((q) => q.lini === p.lini && q.id !== p.id).slice(0, 4),
+      ulasan: ulasan.filter((u) => u.jenis === "produk" && u.produk === p.id),
+    },
   }));
 }
 
-const { produk: p, ulasan } = Astro.props as { produk: Produk; ulasan: import("../../lib/pb").Ulasan[] };
+const { produk: p, related, ulasan } = Astro.props as {
+  produk: Produk;
+  related: Produk[];
+  ulasan: import("../../lib/pb").Ulasan[];
+};
 const v0 = p.varian.find((v) => v.stok > 0 || v.preorder) ?? p.varian[0];
 const fotoAwal = [...v0.foto, ...p.foto];
 const dataKlien = {
@@ -145,6 +154,18 @@ const dataKlien = {
         {ulasan.map((u) => (
           <KartuUlasan ulasan={u} />
         ))}
+      </div>
+    </section>
+  )}
+
+  {related.length > 0 && (
+    <section class="related" aria-labelledby="judul-related">
+      <div class="kepala-bagian">
+        <h2 id="judul-related">Produk terkait</h2>
+        <a href="/katalog">Lihat semua →</a>
+      </div>
+      <div class="grid-related">
+        {related.map((q) => <KartuProduk produk={q} />)}
       </div>
     </section>
   )}
@@ -303,15 +324,15 @@ const dataKlien = {
 
 <style>
   .kembali { display: inline-block; margin: 4px 0 16px; color: var(--muted); text-decoration: none; }
-  .produk { display: grid; grid-template-columns: 1.2fr 1fr; gap: 32px; align-items: start; }
+  .produk { display: grid; grid-template-columns: 1.2fr 1fr; gap: 32px; align-items: start; min-width: 0; }
   /* turun di bawah header yang menempel */
-  .media { position: sticky; top: calc(var(--tinggi-header) + 16px); }
+  .media { position: sticky; top: calc(var(--tinggi-header) + 16px); min-width: 0; }
   .tab { display: flex; gap: 8px; margin-bottom: 12px; }
   .foto-utama {
     aspect-ratio: 1; background: #efeeea; border-radius: var(--radius); overflow: hidden;
-    display: grid; place-items: center;
+    display: grid; place-items: center; min-width: 0;
   }
-  .foto-utama img { width: 100%; height: 100%; object-fit: cover; }
+  .foto-utama img { width: 100%; max-width: 100%; height: 100%; object-fit: cover; }
   .tanpa-foto { color: var(--muted); }
   .foto-kecil { display: flex; gap: 8px; margin-top: 10px; overflow-x: auto; }
   /* :global karena thumbnail dibuat ulang lewat JavaScript saat varian berganti */
@@ -361,6 +382,12 @@ const dataKlien = {
   .rata { color: var(--muted); font-weight: 600; white-space: nowrap; }
   .rata .dari { color: var(--muted); font-weight: 400; font-size: 0.85rem; }
   .grid-ulasan { display: grid; gap: 14px; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); }
+
+  .related { margin-top: 40px; padding-top: 24px; border-top: 1px solid var(--line); }
+  .grid-related { display: grid; gap: 14px; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); }
+  @media (max-width: 559px) {
+    .grid-related { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+  }
 
   @media (max-width: 760px) {
     .produk { grid-template-columns: 1fr; gap: 20px; }

@@ -1,28 +1,31 @@
 /* Token warna terpusat Cupil Stuff.
    Satu sumber untuk semua halaman; halaman lain cukup memakai var(--...).
-   Kontras teks/latar tombol diuji minimal 4,5:1 (lihat laporan di akhir). */
+   Palet menganut desain baru (lihat design.md): Cupil Blue, Green WA,
+   latar abu tipis, teks ink. Kontras teks/latar tombol diuji minimal 4,5:1. */
 
 :root {
   /* permukaan */
-  --bg: #f6f5f2; /* latar halaman */
+  --bg: #f5f5f7; /* latar halaman */
   --card: #ffffff; /* kartu / panel */
-  --line: #e4e2dd; /* garis & border */
+  --line: #e5e7eb; /* garis & border */
 
   /* teks */
-  --text: #1d1d1f; /* teks utama (hitam hanya untuk teks, bukan tombol) */
-  --muted: #6b6b70; /* teks sekunder / abu kecil (mis. kode produk) */
+  --text: #111827; /* teks utama (hitam hanya untuk teks, bukan tombol) */
+  --muted: #6b7280; /* teks sekunder / abu kecil */
+  --dark: #1f2937; /* tombol gelap sekunder (mis. "Lihat hasil servis") */
+  --dark-hover: #111827;
 
-  /* brand: biru topi maskot — tombol utama, chip terpilih, thumbnail aktif,
-     ring swatch, badge keranjang, dan tautan. Hover sedikit lebih gelap. */
-  --brand: #2f5bb5;
-  --brand-hover: #264a94;
-  --brand-ring: rgba(47, 91, 181, 0.28); /* cincin fokus input */
+  /* brand: Cupil Blue — tombol utama, chip aktif, tautan, badge keranjang. */
+  --brand: #2563eb;
+  --brand-hover: #1d4ed8;
+  --brand-soft: #eff4ff; /* latar tipis ikon/area bertema brand */
+  --brand-ring: rgba(37, 99, 235, 0.18); /* cincin fokus input */
 
   /* WhatsApp: semua tombol WA. Solid (teks putih) untuk aksi utama,
      garis + teks hijau untuk aksi kedua. */
-  --wa: #15803d;
-  --wa-hover: #116a32;
-  --wa-soft: #f0f8f3; /* latar tipis saat hover tombol WA garis (kontras teks --wa 4,64:1) */
+  --wa: #16a34a;
+  --wa-hover: #15803d;
+  --wa-soft: #f0f8f3; /* latar tipis saat hover tombol WA garis */
 
   /* status */
   --sukses: #1a7f37; /* hijau: potongan ongkir & langkah selesai */
@@ -34,5 +37,6 @@
 
   /* bentuk */
   --radius: 14px;
+  --radius-lg: 16px;
   --tinggi-header: 56px;
 }

@@ -36,9 +36,11 @@ const warnaTitik = p.warna.filter((w) => w.hex);
 <style>
   .kartu {
     background: var(--card); border: 1px solid var(--line); border-radius: var(--radius);
-    overflow: hidden; text-decoration: none; transition: transform 0.15s, box-shadow 0.15s;
+    overflow: hidden; text-decoration: none;
+    box-shadow: 0 1px 2px rgba(16, 24, 40, 0.06), 0 1px 3px rgba(16, 24, 40, 0.10);
+    transition: transform 0.15s, box-shadow 0.15s, border-color 0.15s;
   }
-  .kartu:hover { transform: translateY(-2px); box-shadow: 0 6px 18px rgba(0, 0, 0, 0.08); }
+  .kartu:hover { transform: translateY(-2px); box-shadow: 0 6px 18px rgba(0, 0, 0, 0.08); border-color: #d7dbe2; }
   .thumb { aspect-ratio: 1; background: #efeeea; position: relative; display: grid; place-items: center; }
   .thumb img { width: 100%; height: 100%; object-fit: cover; }
   .tanpa-foto { color: var(--muted); font-weight: 600; }

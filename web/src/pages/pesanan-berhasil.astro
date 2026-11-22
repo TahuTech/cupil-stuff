@@ -193,12 +193,13 @@ import { TOKO } from "../config";
   .nomor { margin: 0 0 16px; color: var(--muted); }
   .nomor b { color: var(--text); font-size: 1.1rem; letter-spacing: 0.03em; }
   .kotak {
-    width: 100%; max-width: 480px; margin-top: 12px; padding: 16px 18px; text-align: left;
+    width: 100%; max-width: 480px; min-width: 0; margin-top: 12px; padding: 16px 18px; text-align: left;
     background: var(--card); border: 1px solid var(--line); border-radius: var(--radius);
   }
   .kotak h2 { margin: 0 0 10px; font-size: 1rem; }
   .rincian { list-style: none; margin: 0 0 12px; padding: 0 0 12px; border-bottom: 1px solid var(--line); display: grid; gap: 6px; }
-  .rincian :global(li), #angka :global(div) { display: flex; justify-content: space-between; gap: 12px; }
+  .rincian :global(li), #angka :global(div) { display: flex; justify-content: space-between; gap: 12px; min-width: 0; }
+  .rincian :global(li span), #angka :global(dt), #angka :global(dd) { overflow-wrap: anywhere; }
   .rincian :global(li span:last-child) { white-space: nowrap; }
   #angka { margin: 0; display: grid; gap: 6px; }
   #angka :global(dt) { color: var(--muted); }

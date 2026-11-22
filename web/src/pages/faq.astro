@@ -1,0 +1,130 @@
+---
+import Base from "../layouts/Base.astro";
+import { TOKO, linkWA, SERVIS } from "../config";
+---
+<Base judul="FAQ" deskripsi={`Pertanyaan yang sering ditanyakan seputar belanja dan servis di ${TOKO.nama}.`}>
+  <section class="judul">
+    <h1>Pertanyaan yang sering ditanyakan</h1>
+    <p class="lead">Belanja, pengiriman, pembayaran, dan servis mouse &amp; keyboard.</p>
+  </section>
+
+  <section class="info-toko" aria-label="Info toko">
+    <div class="kartu-info">
+      <span class="ikon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 3v5c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6z"/><path d="M9 12l2 2 4-4"/></svg></span>
+      <div><b>Berdiri sejak</b><span>{TOKO.berdiriSejak}</span></div>
+    </div>
+    <div class="kartu-info">
+      <span class="ikon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></span>
+      <div><b>Jam operasional</b><span>{TOKO.jamOperasional}</span></div>
+    </div>
+    <div class="kartu-info">
+      <span class="ikon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 5-4 8-9 8a9 9 0 0 1-4-1L3 21l1.5-5A8 8 0 1 1 21 10z"/></svg></span>
+      <div><b>Metode kontak</b><span><a href={linkWA()} target="_blank" rel="noopener">WhatsApp</a> · pembayaran QRIS</span></div>
+    </div>
+  </section>
+
+  <details class="faq" open>
+    <summary>Pesanan &amp; pengiriman</summary>
+    <div class="faq-isi">
+      <details open><summary>Bagaimana cara memesan produk?</summary>
+        <p>Buka Katalog, pilih produk, tentukan varian, warna, dan jumlah, lalu tekan “Masukkan keranjang”. Lanjut ke Keranjang, isi data pengiriman, dan buat pesanan. Setelah itu kamu mendapat nomor pesanan dan kode QRIS untuk membayar.</p>
+      </details>
+      <details><summary>Bagaimana cara bayarnya?</summary>
+        <p>Pembayaran lewat QRIS. Nominal sudah terisi otomatis sesuai total pesanan. Setelah membayar, kirim bukti bayar via WhatsApp. Pesanan diproses setelah pembayaran dikonfirmasi.</p>
+      </details>
+      <details><summary>Berapa lama pengirimannya?</summary>
+        <p>Kami kirim dari {TOKO.kota} menggunakan J&amp;T. Estimasi tergantung zona tujuan dan ditampilkan saat checkout (semua zona/ongkir bisa dilihat setelah memilih provinsi).</p>
+      </details>
+      <details><summary>Apakah ada potongan ongkir?</summary>
+        <p>Ya, ada potongan ongkir Rp 5.000 untuk setiap Rp 100.000 belanja, maksimal sebesar ongkirnya.</p>
+      </details>
+      <details><summary>Bagaimana cara cek status pesanan saya?</summary>
+        <p>Buka halaman Cek pesanan, masukkan nomor pesanan dan 4 digit terakhir nomor WhatsApp kamu. Di sana kamu bisa melihat status pembayaran dan resi pengiriman.</p>
+      </details>
+      <details><summary>Apa maksud “pre-order”?</summary>
+        <p>Barang pre-order belum ada stok siap kirim, dibuat/diproduksi setelah kamu pesan. Waktu produksinya dikabari lewat WhatsApp.</p>
+      </details>
+    </div>
+  </details>
+
+  <details class="faq">
+    <summary>Servis mouse &amp; keyboard</summary>
+    <div class="faq-isi">
+      <details open><summary>Bagaimana cara mengajukan servis?</summary>
+        <p>Isi form di halaman Servis (jenis perangkat, keluhan, dan foto). Kami buatkan nomor tiket untuk memantau status servis.</p>
+      </details>
+      <details><summary>Apakah ada DP atau biaya pengecekan?</summary>
+        <p>Tidak. Tanpa DP dan pengecekan gratis. Biaya servis dibayar penuh setelah selesai, sesuai estimasi yang sudah disetujui.</p>
+      </details>
+      <details><summary>Bagaimana kalau saya tidak setuju dengan estimasi?</summary>
+        <p>Perangkat kami kirim balik dan kamu hanya menanggung ongkir kirim balik. Kalau diambil langsung ({TOKO.kota}), tanpa biaya.</p>
+      </details>
+      <details><summary>Bagaimana cara cek status servis saya?</summary>
+        <p>Buka halaman Cek Tiket, masukkan nomor tiket dan 4 digit terakhir nomor WhatsApp kamu. Ada timeline tahapan servisnya.</p>
+      </details>
+      <details><summary>Apakah ada garansi servis?</summary>
+        <p>Ya, garansi 7 hari untuk pekerjaan servis. Kalau keluhan yang sama muncul kembali, kami perbaiki gratis.</p>
+      </details>
+      <details><summary>Bagaimana cara mengirim perangkatnya?</summary>
+        <p>Bisa dikirim lewat kurir (alamat muncul setelah tiket dibuat; ongkir kirim balik ditanggung pemilik perangkat) atau {SERVIS.infoAntar}</p>
+      </details>
+    </div>
+  </details>
+
+  <p class="tautan-bantuan">
+    Pertanyaan lain? <a href={linkWA(`Halo ${TOKO.nama}, saya mau bertanya.`)} target="_blank" rel="noopener">Tanya lewat WhatsApp</a>.
+  </p>
+</Base>
+
+<style>
+  .judul { padding: 8px 0 4px; }
+  .judul h1 { margin: 0 0 6px; font-size: 1.6rem; }
+  .lead { margin: 0; color: var(--muted); }
+
+  /* info toko */
+  .info-toko {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px;
+    padding: 20px 0 8px;
+  }
+  .kartu-info {
+    display: flex; gap: 12px; align-items: flex-start;
+    background: var(--card); border: 1px solid var(--line); border-radius: var(--radius);
+    padding: 14px 16px;
+  }
+  .kartu-info .ikon {
+    width: 38px; height: 38px; border-radius: 11px; flex: none;
+    display: grid; place-items: center; background: var(--brand-soft, #eff4ff); color: var(--brand);
+  }
+  .kartu-info .ikon svg { width: 22px; height: 22px; }
+  .kartu-info b { display: block; font-size: 0.85rem; color: var(--muted); font-weight: 500; }
+  .kartu-info span { font-size: 0.9rem; font-weight: 600; }
+  .kartu-info a { color: var(--brand); text-decoration: none; }
+
+  /* faq accordion */
+  .faq { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); margin-top: 14px; }
+  .faq > summary {
+    cursor: pointer; list-style: none; padding: 16px 18px; font-weight: 700; font-size: 1.05rem;
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .faq > summary::-webkit-details-marker { display: none; }
+  .faq > summary::after {
+    content: "+"; font-size: 1.4rem; color: var(--muted); line-height: 1;
+    transition: transform 0.15s;
+  }
+  .faq[open] > summary::after { transform: rotate(45deg); }
+  .faq > .faq-isi { padding: 0 18px 18px; }
+
+  .faq-isi details { border-top: 1px solid var(--line); }
+  .faq-isi details > summary {
+    cursor: pointer; list-style: none; padding: 12px 2px; font-weight: 600; font-size: 0.95rem;
+  }
+  .faq-isi details > summary::-webkit-details-marker { display: none; }
+  .faq-isi details p { margin: 0 0 14px; color: var(--muted); line-height: 1.6; }
+
+  .tautan-bantuan { margin: 20px 0 0; }
+  .tautan-bantuan a { color: var(--brand); font-weight: 600; text-decoration: none; }
+
+  @media (max-width: 640px) {
+    .info-toko { grid-template-columns: 1fr; }
+  }
+</style>

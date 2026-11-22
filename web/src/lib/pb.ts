@@ -249,8 +249,9 @@ export async function ambilPortofolio(): Promise<Portofolio[]> {
 
 // Hanya ulasan dengan status "tampil" yang boleh dibaca publik; aturan ini juga ditegakkan
 // di server (listRule/viewRule koleksi ulasan).
-// `field` membatasi field yang dikirim ke publik: TANPA relasi pesanan/tiket asal & tanpa token,
-// supaya data pribadi / tautan sekali-pakai tidak pernah ikut terkirim ke browser.
+// `field` membatasi field yang dikirim ke build: TANPA relasi pesanan/tiket asal & tanpa token.
+// Sebagai lapis kedua, field pesanan/tiket/token ditandai `hidden` di koleksi (migrasi
+// 1764400001_ulasan_sembunyikan_pribadi), jadi respons API publik mentah pun tak pernah memuatnya.
 const FIELD_ULASAN = "id,jenis,produk,jasa,bintang,komentar,foto,nama_tampil,sumber,terverifikasi,unggulan";
 
 /**

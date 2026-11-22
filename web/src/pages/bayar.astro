@@ -6,7 +6,7 @@ import BannerServer from "../components/BannerServer.astro";
 
 <Base judul="Bayar pesanan" deskripsi="Cek dan bayar pesanan Cupil Stuff">
   <BannerServer />
-  <section class="bayar" id="layar-masuk" hidden>
+  <section class="bayar" id="layar-masuk">
     <Maskot ukuran={100} />
     <h1>Cek pesanan</h1>
     <p class="info">Masukkan nomor pesanan dan 4 digit terakhir nomor WhatsApp kamu.</p>
@@ -254,10 +254,11 @@ tampil("layar-masuk");
   .form input:focus { border-color: var(--brand); outline: none; box-shadow: 0 0 0 3px var(--brand-ring); }
   #wa4 { text-align: center; font-size: 1.4rem; letter-spacing: 0.3em; max-width: 120px; justify-self: center; }
   .galat { color: var(--habis); font-size: 0.85rem; margin: 0; }
-  .kotak { width: 100%; max-width: 480px; margin-top: 12px; padding: 16px 18px; text-align: left; background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); }
+  .kotak { width: 100%; max-width: 480px; min-width: 0; margin-top: 12px; padding: 16px 18px; text-align: left; background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); }
   .kotak h2 { margin: 0 0 10px; font-size: 1rem; }
   .rincian { list-style: none; margin: 0 0 12px; padding: 0 0 12px; border-bottom: 1px solid var(--line); display: grid; gap: 6px; }
-  .rincian :global(li), #angka :global(div) { display: flex; justify-content: space-between; gap: 12px; }
+  .rincian :global(li), #angka :global(div) { display: flex; justify-content: space-between; gap: 12px; min-width: 0; }
+  .rincian :global(li span), #angka :global(dt), #angka :global(dd) { overflow-wrap: anywhere; }
   .rincian :global(li span:last-child) { white-space: nowrap; }
   #angka { margin: 0; display: grid; gap: 6px; }
   #angka :global(dt) { color: var(--muted); }

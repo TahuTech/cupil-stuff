@@ -118,6 +118,7 @@ const aturan = [
   <section class="form-servis" id="form-servis" aria-labelledby="judul-form">
     <h2 id="judul-form">Ajukan servis</h2>
     <p class="keterangan">Isi data di bawah. Kami buatkan nomor tiket supaya kamu bisa memantau status servis. Sudah punya tiket? <a href="/cek-tiket">Cek status tiket</a>.</p>
+    <div class="form-layout">
     <form id="servis" novalidate>
       <div class="baris">
         <label class="kolom">
@@ -151,13 +152,18 @@ const aturan = [
         <small class="galat" data-untuk="keluhan"></small>
       </label>
 
-      <label class="kolom">
+      <div class="kolom">
         <span>Foto perangkat <em>(opsional, maks 5)</em></span>
-        <input id="foto" name="foto" type="file" accept="image/jpeg,image/png,image/webp" multiple />
-        <small class="bantuan">JPG, PNG, atau WebP. Foto otomatis dikecilkan sebelum diunggah.</small>
+        <label class="upload-dashed" for="foto">
+          <svg class="ikon-kamera" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" /><circle cx="12" cy="13" r="4" /></svg>
+          <b>Tambah foto perangkat</b>
+          <span>JPG, PNG, atau WebP</span>
+          <input id="foto" name="foto" type="file" accept="image/jpeg,image/png,image/webp" multiple class="sr-only" />
+        </label>
+        <small class="bantuan">Foto otomatis dikecilkan sebelum diunggah.</small>
         <small class="galat" data-untuk="foto"></small>
         <ul class="pratinjau" id="pratinjau-foto"></ul>
-      </label>
+      </div>
 
       <div class="baris">
         <label class="kolom">
@@ -200,6 +206,27 @@ const aturan = [
       <button type="submit" class="tombol utama" id="kirim">Buat tiket servis</button>
       <p class="catatan-kirim" id="catatan-kirim">Nomor tiket dibuat otomatis. Kamu bisa memantau status di halaman cek tiket.</p>
     </form>
+
+    <aside class="form-aside" aria-label="Ringkasan layanan">
+      <div class="form-aside-item">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M9 12l2 2 4-4" /></svg>
+        <div><b>Cek gratis</b><span>Tidak ada biaya membuka &amp; mengecek perangkat.</span></div>
+      </div>
+      <div class="form-aside-item">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7h16a1 1 0 0 1 1 1v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" /><path d="M3 7l13-3v3" /><circle cx="16" cy="13" r="1.2" /></svg>
+        <div><b>Tanpa DP</b><span>Bayar penuh setelah selesai, sesuai estimasi yang disetujui.</span></div>
+      </div>
+      <div class="form-aside-item">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l7 3v5c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6z" /><path d="M9 12l2 2 4-4" /></svg>
+        <div><b>Garansi 7 hari</b><span>Keluhan yang sama muncul lagi? Kami perbaiki gratis.</span></div>
+      </div>
+      <div class="form-aside-item">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg>
+        <div><b>Jam operasional</b><span>{TOKO.jamOperasional}</span></div>
+      </div>
+      <a class="tombol wa" href={linkWA(`Halo ${TOKO.nama}, saya mau tanya soal servis.`)} target="_blank" rel="noopener">Tanya via WhatsApp</a>
+    </aside>
+    </div>
   </section>
 
   <section class="sukses" id="sukses" hidden>
@@ -402,9 +429,9 @@ const aturan = [
   .estimasi { color: var(--muted); font-size: 0.85rem; margin: 0; }
 
   .grid-portofolio { display: grid; gap: 16px; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); }
-  .kartu-portofolio { margin: 0; background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; }
-  .pasangan { display: grid; grid-template-columns: 1fr 1fr; }
-  .pasangan img, .pasangan .kosong { width: 100%; aspect-ratio: 1 / 1; object-fit: cover; display: flex; align-items: center; justify-content: center; color: var(--muted); background: #efeeea; font-size: 0.8rem; }
+  .kartu-portofolio { margin: 0; min-width: 0; background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; }
+  .pasangan { display: grid; grid-template-columns: 1fr 1fr; min-width: 0; }
+  .pasangan img, .pasangan .kosong { width: 100%; max-width: 100%; aspect-ratio: 1 / 1; object-fit: cover; display: flex; align-items: center; justify-content: center; color: var(--muted); background: #efeeea; font-size: 0.8rem; }
   .kartu-portofolio figcaption { display: flex; flex-direction: column; gap: 2px; padding: 10px 12px; }
   .kartu-portofolio figcaption span { color: var(--muted); font-size: 0.85rem; }
 
@@ -434,6 +461,16 @@ const aturan = [
   .galat-umum { color: var(--habis); font-size: 0.9rem; padding: 10px 12px; background: var(--habis-bg); border-radius: var(--radius); }
 
   .pratinjau { list-style: none; display: flex; flex-wrap: wrap; gap: 8px; margin: 4px 0 0; padding: 0; }
+  .upload-dashed {
+    border: 2px dashed #cbd2dd; border-radius: 14px; background: #fafbfc;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px;
+    padding: 20px 16px; text-align: center; cursor: pointer;
+    transition: border-color 0.15s, background 0.15s;
+  }
+  .upload-dashed:hover, .upload-dashed:focus-within { border-color: var(--brand); background: var(--brand-soft); }
+  .upload-dashed .ikon-kamera { width: 32px; height: 32px; color: var(--brand); }
+  .upload-dashed b { font-size: 0.95rem; font-weight: 600; }
+  .upload-dashed span { color: var(--muted); font-size: 0.8rem; }
   .pratinjau :global(li) { width: 64px; height: 64px; border-radius: 8px; overflow: hidden; border: 1px solid var(--line); }
   .pratinjau :global(img) { width: 100%; height: 100%; object-fit: cover; }
 
@@ -455,6 +492,28 @@ const aturan = [
   .info-kirim { max-width: 46ch; color: var(--muted); }
   .sukses .aksi { justify-content: center; }
   .simpan { color: var(--muted); font-size: 0.85rem; max-width: 44ch; }
+
+  .form-layout { display: block; }
+  .form-aside { display: none; }
+  .form-aside-item { display: flex; gap: 10px; align-items: flex-start; }
+  .form-aside-item svg { width: 22px; height: 22px; color: var(--brand); flex: none; margin-top: 1px; }
+  .form-aside-item b { display: block; font-size: 0.9rem; }
+  .form-aside-item span { color: var(--muted); font-size: 0.83rem; line-height: 1.45; }
+  .form-aside .tombol { margin-top: 8px; }
+
+  /* desktop: hero 2 kolom, cara-kerja 3 kolom, form + aside ringkasan */
+  @media (min-width: 860px) {
+    .hero-servis { gap: 48px; padding: 24px 0 32px; }
+    .hero-servis h1 { font-size: 1.9rem; }
+    .aturan ul { grid-template-columns: repeat(3, 1fr); }
+    .form-layout { display: grid; grid-template-columns: 1.7fr 1fr; gap: 24px; align-items: start; }
+    #servis { max-width: none; }
+    .form-aside {
+      display: flex; flex-direction: column; gap: 14px; position: sticky; top: calc(var(--tinggi-header) + 16px);
+      background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); padding: 18px;
+      box-shadow: 0 1px 2px rgba(16, 24, 40, 0.06);
+    }
+  }
 
   @media (max-width: 600px) {
     .hero-servis { flex-direction: column-reverse; align-items: flex-start; gap: 12px; }

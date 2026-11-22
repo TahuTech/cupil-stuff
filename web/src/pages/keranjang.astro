@@ -25,6 +25,7 @@ const labelProvinsi = (p: string) => (p === "Jawa Timur" ? "Jawa Timur (selain K
 
   <div class="tata" id="isi" hidden>
     <section aria-label="Daftar barang">
+      <a class="lanjut-belanja" href="/katalog">← Lanjut belanja</a>
       <ul class="daftar" id="daftar"></ul>
     </section>
 
@@ -360,6 +361,8 @@ const labelProvinsi = (p: string) => (p === "Jawa Timur" ? "Jawa Timur (selain K
 
 <style>
   .judul { margin: 4px 0 16px; font-size: 1.5rem; }
+  .lanjut-belanja { display: inline-block; margin-bottom: 12px; color: var(--muted); text-decoration: none; }
+  .lanjut-belanja:hover { color: var(--brand); }
   .kosong { display: flex; flex-direction: column; align-items: center; text-align: center; padding: 24px 0; }
   .kosong p { margin: 16px 0 20px; color: var(--muted); }
 

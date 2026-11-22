@@ -234,13 +234,13 @@ import { TOKO } from "../config";
   h2 { margin: 12px 0 4px; font-size: 1.3rem; }
   .info { margin: 0 0 16px; color: var(--muted); max-width: 42ch; }
 
-  .form { width: 100%; max-width: 480px; display: grid; gap: 14px; text-align: left; }
+  .form { width: 100%; max-width: 480px; min-width: 0; display: grid; gap: 14px; text-align: left; }
   .form input:not([type="checkbox"]), .form textarea {
-    font: inherit; padding: 10px 12px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--card); width: 100%;
+    font: inherit; padding: 10px 12px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--card); width: 100%; max-width: 100%; min-width: 0;
   }
   .form input:focus, .form textarea:focus { border-color: var(--brand); outline: none; box-shadow: 0 0 0 3px var(--brand-ring); }
   .form [aria-invalid="true"] { border-color: var(--habis); }
-  .kolom { display: grid; gap: 6px; font-size: 0.9rem; }
+  .kolom { display: grid; gap: 6px; font-size: 0.9rem; min-width: 0; }
   .kolom > span { font-weight: 600; }
   .kolom em { font-weight: 400; color: var(--muted); font-style: normal; }
   .bantuan { color: var(--muted); font-size: 0.8rem; }
@@ -248,7 +248,7 @@ import { TOKO } from "../config";
   .galat:empty { display: none; }
   .galat-umum { color: var(--habis); font-size: 0.9rem; padding: 10px 12px; background: var(--habis-bg); border-radius: var(--radius); }
 
-  .bintang-field { border: 1px solid var(--line); border-radius: var(--radius); padding: 12px 14px; display: grid; gap: 8px; }
+  .bintang-field { border: 1px solid var(--line); border-radius: var(--radius); padding: 12px 14px; display: grid; gap: 8px; min-width: 0; }
   .bintang-field legend { font-weight: 600; font-size: 0.9rem; padding: 0 4px; }
   .pilih-bintang { display: flex; gap: 4px; }
   .bintang-btn {

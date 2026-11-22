@@ -4,6 +4,9 @@ export const TOKO = {
   nama: "Cupil Stuff",
   tagline: "Model 3D buatan sendiri, barang EDC, dan servis mouse & keyboard mechanical",
   kota: "Surabaya",
+  // Berdiri dan aktif berjualan sejak bulan/tahun ini (tampil di footer & halaman tentang).
+  berdiriSejak: "Februari 2020",
+  jamOperasional: "Senin–Sabtu, 09.00–20.00 WIB",
   // TODO(go-live): nomor WhatsApp toko, format internasional: 62 lalu nomor tanpa 0 di depan
   nomorWA: "6281234567890",
   // TODO(go-live): toko di marketplace, tampil di footer. Biarkan kosong jika belum ada.

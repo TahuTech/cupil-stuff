@@ -1,6 +1,7 @@
 ---
 import { TOKO, linkWA } from "../config";
 import MaskotKepala from "../components/MaskotKepala.astro";
+import "../styles/tokens.css";
 
 interface Props {
   judul?: string;
@@ -93,18 +94,6 @@ const judulLengkap = judul ? `${judul} · ${TOKO.nama}` : `${TOKO.nama} · ${TOK
 </html>
 
 <style is:global>
-  :root {
-    --bg: #f6f5f2;
-    --card: #fff;
-    --text: #1d1d1f;
-    --muted: #6b6b70;
-    --accent: #1f6feb;
-    --wa: #25d366;
-    --line: #e4e2dd;
-    --habis: #b42318;
-    --radius: 14px;
-    --tinggi-header: 56px;
-  }
   * { box-sizing: border-box; }
   /* atribut hidden selalu menang atas display dari CSS komponen */
   [hidden] { display: none !important; }
@@ -143,12 +132,14 @@ const judulLengkap = judul ? `${judul} · ${TOKO.nama}` : `${TOKO.nama} · ${TOK
   .topbar nav a { display: flex; align-items: center; gap: 6px; text-decoration: none; color: var(--muted); white-space: nowrap; }
   .topbar nav a:hover { color: var(--text); }
   .topbar nav a[aria-current="page"] { color: var(--text); font-weight: 600; }
+  /* ikon WhatsApp di header ikut hijau saat hover */
+  .topbar nav a.nav-wa:hover { color: var(--wa); }
   .ikon-wa { width: 20px; height: 20px; flex: none; }
   .ikon-nav { width: 22px; height: 22px; flex: none; }
   .nav-keranjang { position: relative; }
   .badge-keranjang {
     position: absolute; top: -7px; right: -9px; min-width: 18px; height: 18px; padding: 0 5px;
-    border-radius: 999px; background: var(--accent); color: #fff; font-size: 0.7rem; font-weight: 700;
+    border-radius: 999px; background: var(--brand); color: #fff; font-size: 0.7rem; font-weight: 700;
     line-height: 18px; text-align: center;
   }
   /* HP: WhatsApp jadi ikon saja supaya semua muat satu baris mulai 360px */
@@ -174,10 +165,19 @@ const judulLengkap = judul ? `${judul} · ${TOKO.nama}` : `${TOKO.nama} · ${TOK
 
   .tombol {
     display: inline-block; padding: 12px 22px; border-radius: 12px; font-weight: 600;
-    text-decoration: none; text-align: center; border: 1px solid var(--line); background: #fff;
+    text-decoration: none; text-align: center; border: 1px solid var(--line);
+    background: var(--card); color: var(--text); cursor: pointer;
   }
-  .tombol.utama { background: var(--text); color: #fff; border-color: var(--text); }
+  /* aksi utama: biru brand, hover sedikit lebih gelap */
+  .tombol.utama { background: var(--brand); color: #fff; border-color: var(--brand); }
+  .tombol.utama:hover { background: var(--brand-hover); border-color: var(--brand-hover); }
+  /* WhatsApp aksi utama: hijau solid, teks putih */
   .tombol.wa { background: var(--wa); color: #fff; border-color: var(--wa); }
+  .tombol.wa:hover { background: var(--wa-hover); border-color: var(--wa-hover); }
+  /* WhatsApp aksi kedua: garis hijau + teks hijau */
+  .tombol.wa-outline { background: var(--card); color: var(--wa); border-color: var(--wa); }
+  .tombol.wa-outline:hover { background: var(--wa-soft); }
+  .tombol:disabled { opacity: 0.6; cursor: not-allowed; }
 
   /* notifikasi singkat (lib/notifikasi.ts) */
   .notifikasi {
@@ -191,16 +191,16 @@ const judulLengkap = judul ? `${judul} · ${TOKO.nama}` : `${TOKO.nama} · ${TOK
   .notifikasi a { color: #9cc2ff; font-weight: 600; white-space: nowrap; }
   @media (prefers-reduced-motion: reduce) { .notifikasi { transition: none; } }
 
-  .kode { font-size: 0.75rem; font-weight: 700; color: var(--accent); letter-spacing: 0.04em; }
+  .kode { font-size: 0.75rem; font-weight: 600; color: var(--muted); letter-spacing: 0.02em; }
   .harga { font-weight: 600; }
   .badge { display: inline-block; font-size: 0.75rem; padding: 2px 8px; border-radius: 999px; background: #eee; }
-  .badge.habis { background: #fde8e7; color: var(--habis); }
-  .badge.preorder { background: #fff3cd; color: #7a5b00; }
+  .badge.habis { background: var(--habis-bg); color: var(--habis); }
+  .badge.preorder { background: var(--banner-bg); color: var(--banner-text); }
   .chip {
     padding: 8px 14px; border-radius: 999px; border: 1px solid var(--line);
     background: #fff; cursor: pointer; font-size: 0.9rem; color: var(--text);
   }
-  .chip.aktif { background: var(--text); color: #fff; border-color: var(--text); }
+  .chip.aktif { background: var(--brand); color: #fff; border-color: var(--brand); }
   /* tersembunyi di layar, tetap dibaca mesin pencari dan pembaca layar */
   .sr-only {
     position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;

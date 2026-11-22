@@ -234,9 +234,12 @@ const labelProvinsi = (p: string) => (p === "Jawa Timur" ? "Jawa Timur (selain K
   let ongkirTerakhir: OngkirWA | null = null;
   let serverMati = false;
 
-  // label tombol berubah sesuai status server (hidup → "Buat pesanan", mati → "Pesan via WhatsApp")
+  // label tombol berubah sesuai status server (hidup → "Buat pesanan" biru brand, mati → "Pesan via WhatsApp" hijau)
   function aturTombol() {
     tombolKirim.textContent = serverMati ? "Pesan via WhatsApp" : "Buat pesanan";
+    // ganti penampilan tombol: brand (aksi utama) ↔ hijau WhatsApp (fallback)
+    tombolKirim.classList.toggle("wa", serverMati);
+    tombolKirim.classList.toggle("utama", !serverMati);
     if (catatan) {
       catatan.textContent = serverMati
         ? "Pemesanan otomatis sedang tidak tersedia. Pesanan akan dikirim lewat WhatsApp; total dan stok dikonfirmasi penjual."
@@ -400,8 +403,8 @@ const labelProvinsi = (p: string) => (p === "Jawa Timur" ? "Jawa Timur (selain K
     background: #fff; font: inherit; color: var(--text);
   }
   .zona { margin: 10px 0 8px; font-size: 0.85rem; color: var(--muted); }
-  .potongan { color: #1a7f37; }
-  .konfirmasi { margin: 10px 0 0; padding: 10px 12px; border-radius: 10px; background: #fff3cd; color: #7a5b00; font-size: 0.9rem; }
+  .potongan { color: var(--sukses); }
+  .konfirmasi { margin: 10px 0 0; padding: 10px 12px; border-radius: 10px; background: var(--banner-bg); color: var(--banner-text); font-size: 0.9rem; }
   .total { margin-top: 12px !important; padding-top: 12px; border-top: 1px solid var(--line); }
   .total :global(dt), .total :global(dd) { color: var(--text); font-size: 1.15rem; font-weight: 700; }
 
@@ -411,7 +414,7 @@ const labelProvinsi = (p: string) => (p === "Jawa Timur" ? "Jawa Timur (selain K
   .form-checkout textarea { resize: vertical; }
   .form-checkout :global([aria-invalid="true"]) { border-color: var(--habis); }
   .galat { margin: 4px 0 0; color: var(--habis); font-size: 0.85rem; }
-  .galat-umum { margin-top: 14px; padding: 10px 12px; border-radius: 10px; background: #fde8e7; color: var(--habis); font-size: 0.9rem; }
+  .galat-umum { margin-top: 14px; padding: 10px 12px; border-radius: 10px; background: var(--habis-bg); color: var(--habis); font-size: 0.9rem; }
   .galat-umum :global(ul) { margin: 6px 0 0; padding-left: 18px; }
   .kirim { width: 100%; margin-top: 16px; font: inherit; font-weight: 600; cursor: pointer; }
   .kirim:disabled { opacity: 0.6; cursor: wait; }

@@ -251,9 +251,9 @@ tampil("layar-masuk");
   .form label { display: grid; gap: 4px; text-align: left; font-size: 0.9rem; color: var(--muted); }
   .form label span { font-weight: 600; color: var(--text); font-size: 0.85rem; }
   .form input { font: inherit; padding: 10px 12px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--card); letter-spacing: 0.04em; }
-  .form input:focus { border-color: var(--primary); outline: none; box-shadow: 0 0 0 3px var(--primary-alpha); }
+  .form input:focus { border-color: var(--brand); outline: none; box-shadow: 0 0 0 3px var(--brand-ring); }
   #wa4 { text-align: center; font-size: 1.4rem; letter-spacing: 0.3em; max-width: 120px; justify-self: center; }
-  .galat { color: #d32f2f; font-size: 0.85rem; margin: 0; }
+  .galat { color: var(--habis); font-size: 0.85rem; margin: 0; }
   .kotak { width: 100%; max-width: 480px; margin-top: 12px; padding: 16px 18px; text-align: left; background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); }
   .kotak h2 { margin: 0 0 10px; font-size: 1rem; }
   .rincian { list-style: none; margin: 0 0 12px; padding: 0 0 12px; border-bottom: 1px solid var(--line); display: grid; gap: 6px; }
@@ -262,7 +262,7 @@ tampil("layar-masuk");
   #angka { margin: 0; display: grid; gap: 6px; }
   #angka :global(dt) { color: var(--muted); }
   #angka :global(dd) { margin: 0; font-weight: 600; text-align: right; }
-  #angka :global(.potongan dd) { color: #1a7f37; }
+  #angka :global(.potongan dd) { color: var(--sukses); }
   #angka :global(.total) { margin-top: 6px; padding-top: 10px; border-top: 1px solid var(--line); }
   #angka :global(.total dt), #angka :global(.total dd) { color: var(--text); font-size: 1.15rem; font-weight: 700; }
   #bagian-bayar { display: flex; flex-direction: column; gap: 12px; }

@@ -44,7 +44,7 @@ const langkah = [
     </div>
     <div class="hero-aksi">
       <a class="tombol utama" href="/katalog">Lihat katalog</a>
-      <a class="tombol" href={linkWA(`Halo ${TOKO.nama}, saya mau tanya.`)} target="_blank" rel="noopener">Tanya via WhatsApp</a>
+      <a class="tombol wa-outline" href={linkWA(`Halo ${TOKO.nama}, saya mau tanya.`)} target="_blank" rel="noopener">Tanya via WhatsApp</a>
     </div>
     <Maskot ukuran={180} class="hero-maskot" />
   </section>
@@ -128,7 +128,7 @@ const langkah = [
   .bagian { padding: 28px 0 0; }
   .bagian h2 { margin: 0 0 14px; font-size: 1.25rem; }
   .kepala-bagian { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
-  .kepala-bagian a { color: var(--accent); text-decoration: none; font-weight: 600; white-space: nowrap; }
+  .kepala-bagian a { color: var(--brand); text-decoration: none; font-weight: 600; white-space: nowrap; }
 
   .lini { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
   .kartu-lini {
@@ -137,7 +137,7 @@ const langkah = [
   }
   .kartu-lini:hover { transform: translateY(-2px); box-shadow: 0 6px 18px rgba(0, 0, 0, 0.08); }
   .kartu-lini h3 { margin: 0 0 6px; font-size: 1.05rem; }
-  .kartu-lini h3 span { color: var(--accent); }
+  .kartu-lini h3 span { color: var(--brand); }
   .kartu-lini p { margin: 0; color: var(--muted); font-size: 0.95rem; }
 
   .langkah { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }

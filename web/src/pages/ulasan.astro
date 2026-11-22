@@ -238,15 +238,15 @@ import { TOKO } from "../config";
   .form input:not([type="checkbox"]), .form textarea {
     font: inherit; padding: 10px 12px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--card); width: 100%;
   }
-  .form input:focus, .form textarea:focus { border-color: var(--primary); outline: none; box-shadow: 0 0 0 3px var(--primary-alpha); }
-  .form [aria-invalid="true"] { border-color: #d32f2f; }
+  .form input:focus, .form textarea:focus { border-color: var(--brand); outline: none; box-shadow: 0 0 0 3px var(--brand-ring); }
+  .form [aria-invalid="true"] { border-color: var(--habis); }
   .kolom { display: grid; gap: 6px; font-size: 0.9rem; }
   .kolom > span { font-weight: 600; }
   .kolom em { font-weight: 400; color: var(--muted); font-style: normal; }
   .bantuan { color: var(--muted); font-size: 0.8rem; }
-  .galat { color: #d32f2f; font-size: 0.82rem; }
+  .galat { color: var(--habis); font-size: 0.82rem; }
   .galat:empty { display: none; }
-  .galat-umum { color: #d32f2f; font-size: 0.9rem; padding: 10px 12px; background: #fde8e7; border-radius: var(--radius); }
+  .galat-umum { color: var(--habis); font-size: 0.9rem; padding: 10px 12px; background: var(--habis-bg); border-radius: var(--radius); }
 
   .bintang-field { border: 1px solid var(--line); border-radius: var(--radius); padding: 12px 14px; display: grid; gap: 8px; }
   .bintang-field legend { font-weight: 600; font-size: 0.9rem; padding: 0 4px; }
@@ -258,7 +258,7 @@ import { TOKO } from "../config";
   .bintang-btn > span { pointer-events: none; }
   .bintang-btn:hover, .bintang-btn.hover, .bintang-btn.aktif { color: #f5a623; -webkit-text-stroke: 1px #f5a623; }
   .bintang-btn:focus { outline: none; }
-  .bintang-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 4px; }
+  .bintang-btn:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; border-radius: 4px; }
 
   .pratinjau { list-style: none; display: flex; flex-wrap: wrap; gap: 8px; margin: 4px 0 0; padding: 0; }
   .pratinjau :global(li) { width: 64px; height: 64px; border-radius: 8px; overflow: hidden; border: 1px solid var(--line); }

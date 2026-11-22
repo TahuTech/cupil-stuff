@@ -319,7 +319,7 @@ const dataKlien = {
     flex: 0 0 64px; height: 64px; padding: 0; border: 2px solid transparent;
     border-radius: 10px; overflow: hidden; cursor: pointer; background: #efeeea;
   }
-  .foto-kecil :global(button.aktif) { border-color: var(--accent); }
+  .foto-kecil :global(button.aktif) { border-color: var(--brand); }
   .foto-kecil :global(img) { width: 100%; height: 100%; object-fit: cover; }
   /* height: auto wajib: model-viewer punya height 150px bawaan, yang membuat aspect-ratio diabaikan */
   model-viewer { width: 100%; height: auto; aspect-ratio: 1; background: #efeeea; border-radius: var(--radius); }
@@ -335,7 +335,7 @@ const dataKlien = {
     width: 36px; height: 36px; border-radius: 50%; cursor: pointer;
     border: 2px solid #fff; outline: 2px solid var(--line);
   }
-  .swatch.aktif { outline: 3px solid var(--accent); }
+  .swatch.aktif { outline: 3px solid var(--brand); }
   .swatch.asli { background: conic-gradient(#e53935, #fbc02d, #43a047, #1e88e5, #8e24aa, #e53935); }
   .jumlah { display: inline-flex; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; background: #fff; }
   .jumlah button { width: 40px; border: none; background: none; font-size: 1.2rem; cursor: pointer; }
@@ -345,10 +345,11 @@ const dataKlien = {
     flex: 1 1 200px; text-align: center; padding: 14px; border-radius: 12px;
     font: inherit; font-weight: 600; text-decoration: none; cursor: pointer;
   }
-  /* utama: masukkan keranjang; WhatsApp jadi pilihan kedua */
-  .btn-keranjang { flex-basis: 100% !important; background: var(--text); color: #fff; border: 1px solid var(--text); }
+  /* utama: masukkan keranjang (biru brand); WhatsApp jadi pilihan kedua (garis hijau + teks hijau) */
+  .btn-keranjang { flex-basis: 100% !important; background: var(--brand); color: #fff; border: 1px solid var(--brand); }
+  .btn-keranjang:not(:disabled):hover { background: var(--brand-hover); border-color: var(--brand-hover); }
   .btn-keranjang:disabled { background: #ccc; border-color: #ccc; cursor: not-allowed; }
-  .btn-wa { background: #fff; color: #128c4a; border: 1px solid var(--wa); }
+  .btn-wa { background: var(--card); color: var(--wa); border: 1px solid var(--wa); }
   .btn-wa.nonaktif { color: #999; border-color: #ccc; pointer-events: none; }
   .btn-mp { background: #fff; border: 1px solid var(--line); }
   .deskripsi { margin-top: 28px; padding-top: 20px; border-top: 1px solid var(--line); }
@@ -356,7 +357,7 @@ const dataKlien = {
   .ulasan { margin-top: 40px; padding-top: 24px; border-top: 1px solid var(--line); }
   .kepala-bagian { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; margin-bottom: 14px; }
   .kepala-bagian h2 { margin: 0; font-size: 1.25rem; }
-  .kepala-bagian a { color: var(--accent); font-weight: 600; text-decoration: none; }
+  .kepala-bagian a { color: var(--brand); font-weight: 600; text-decoration: none; }
   .rata { color: var(--muted); font-weight: 600; white-space: nowrap; }
   .rata .dari { color: var(--muted); font-weight: 400; font-size: 0.85rem; }
   .grid-ulasan { display: grid; gap: 14px; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); }

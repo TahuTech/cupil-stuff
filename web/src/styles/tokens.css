@@ -1,0 +1,38 @@
+/* Token warna terpusat Cupil Stuff.
+   Satu sumber untuk semua halaman; halaman lain cukup memakai var(--...).
+   Kontras teks/latar tombol diuji minimal 4,5:1 (lihat laporan di akhir). */
+
+:root {
+  /* permukaan */
+  --bg: #f6f5f2; /* latar halaman */
+  --card: #ffffff; /* kartu / panel */
+  --line: #e4e2dd; /* garis & border */
+
+  /* teks */
+  --text: #1d1d1f; /* teks utama (hitam hanya untuk teks, bukan tombol) */
+  --muted: #6b6b70; /* teks sekunder / abu kecil (mis. kode produk) */
+
+  /* brand: biru topi maskot — tombol utama, chip terpilih, thumbnail aktif,
+     ring swatch, badge keranjang, dan tautan. Hover sedikit lebih gelap. */
+  --brand: #2f5bb5;
+  --brand-hover: #264a94;
+  --brand-ring: rgba(47, 91, 181, 0.28); /* cincin fokus input */
+
+  /* WhatsApp: semua tombol WA. Solid (teks putih) untuk aksi utama,
+     garis + teks hijau untuk aksi kedua. */
+  --wa: #15803d;
+  --wa-hover: #116a32;
+  --wa-soft: #f0f8f3; /* latar tipis saat hover tombol WA garis (kontras teks --wa 4,64:1) */
+
+  /* status */
+  --sukses: #1a7f37; /* hijau: potongan ongkir & langkah selesai */
+  --sukses-bg: #e6f4ea;
+  --habis: #b42318; /* merah: stok habis & pesan galat */
+  --habis-bg: #fde8e7;
+  --banner-bg: #fff3cd; /* kuning: banner info */
+  --banner-text: #7a5b00;
+
+  /* bentuk */
+  --radius: 14px;
+  --tinggi-header: 56px;
+}

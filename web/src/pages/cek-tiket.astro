@@ -343,9 +343,9 @@ import { TOKO } from "../config";
   .form label { display: grid; gap: 4px; text-align: left; }
   .form label span { font-weight: 600; font-size: 0.85rem; }
   .form input { font: inherit; padding: 10px 12px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--card); }
-  .form input:focus { border-color: var(--primary); outline: none; box-shadow: 0 0 0 3px var(--primary-alpha); }
+  .form input:focus { border-color: var(--brand); outline: none; box-shadow: 0 0 0 3px var(--brand-ring); }
   #wa4 { text-align: center; font-size: 1.4rem; letter-spacing: 0.3em; max-width: 120px; justify-self: center; }
-  .galat { color: #d32f2f; font-size: 0.85rem; margin: 0; }
+  .galat { color: var(--habis); font-size: 0.85rem; margin: 0; }
   .kotak { width: 100%; max-width: 480px; margin-top: 12px; padding: 16px 18px; text-align: left; background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); }
   .kotak h2 { margin: 0 0 10px; font-size: 1rem; }
   #detail { margin: 0; display: grid; gap: 8px; }
@@ -365,12 +365,12 @@ import { TOKO } from "../config";
   .langkah :global(li:not(:last-child))::after {
     content: ""; position: absolute; left: 13px; top: 32px; bottom: -6px; width: 2px; background: var(--line);
   }
-  .langkah :global(li.lewat:not(:last-child))::after { background: #1a7f37; }
+  .langkah :global(li.lewat:not(:last-child))::after { background: var(--sukses); }
   .langkah :global(.titik) {
     flex: none; width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center;
     font-size: 0.8rem; font-weight: 700; background: var(--card); border: 2px solid var(--line); position: relative; z-index: 1;
   }
-  .langkah :global(li.lewat .titik) { background: #1a7f37; border-color: #1a7f37; color: #fff; }
+  .langkah :global(li.lewat .titik) { background: var(--sukses); border-color: var(--sukses); color: #fff; }
   .langkah :global(li.sekarang) { color: var(--text); font-weight: 700; }
   .langkah :global(li.sekarang .titik) { background: var(--text); border-color: var(--text); color: #fff; }
   #bagian-biaya :global(.rincian) { margin: 0; display: grid; gap: 6px; }
@@ -382,7 +382,7 @@ import { TOKO } from "../config";
   #bagian-biaya :global(button.tombol) { font: inherit; font-weight: 600; cursor: pointer; }
   /* elemen di bawah dibuat lewat JS, jadi perlu :global */
   #bagian-biaya :global(h2) { margin: 0; font-size: 1.05rem; }
-  #bagian-biaya :global(.lunas) { margin: 0; padding: 12px 14px; border-radius: 10px; background: #e6f4ea; color: #1a7f37; font-weight: 700; }
+  #bagian-biaya :global(.lunas) { margin: 0; padding: 12px 14px; border-radius: 10px; background: var(--sukses-bg); color: var(--sukses); font-weight: 700; }
   #bagian-biaya :global(.tombol.tolak) { background: var(--card); color: var(--text); border: 1px solid var(--line); }
   @media (max-width: 480px) { h1 { font-size: 1.25rem; } }
 </style>

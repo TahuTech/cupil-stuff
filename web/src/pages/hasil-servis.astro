@@ -109,13 +109,13 @@ const portofolioBerjenis = portofolio.map((p) => ({ ...p, jenis: jenisPortofolio
   .portofolio, .ulasan { padding: 24px 0 0; }
   .kepala-bagian { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; margin-bottom: 14px; }
   .kepala-bagian h2 { margin: 0; font-size: 1.25rem; }
-  .kepala-bagian a { color: var(--accent); font-weight: 600; text-decoration: none; }
+  .kepala-bagian a { color: var(--brand); font-weight: 600; text-decoration: none; }
   .rata { color: var(--muted); font-weight: 600; white-space: nowrap; }
   .rata .dari { color: var(--muted); font-weight: 400; font-size: 0.85rem; }
 
   .filter { display: flex; flex-wrap: wrap; gap: 8px; }
   .filter :global(.chip) { cursor: pointer; font: inherit; font-size: 0.85rem; }
-  .filter :global(.chip.aktif) { background: var(--text); color: #fff; border-color: var(--text); }
+  .filter :global(.chip.aktif) { background: var(--brand); color: #fff; border-color: var(--brand); }
 
   .grid-portofolio { display: grid; gap: 16px; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); }
   .kartu-portofolio { margin: 0; background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; }
@@ -127,7 +127,7 @@ const portofolioBerjenis = portofolio.map((p) => ({ ...p, jenis: jenisPortofolio
   .grid-ulasan { display: grid; gap: 14px; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); }
   .kosong { text-align: center; color: var(--muted); padding: 16px 0; }
   .kosong-semua { padding: 24px 0; color: var(--muted); }
-  .kosong-semua a { color: var(--accent); font-weight: 600; text-decoration: none; }
+  .kosong-semua a { color: var(--brand); font-weight: 600; text-decoration: none; }
 
   @media (max-width: 559px) {
     .kepala-bagian { flex-direction: column; align-items: flex-start; gap: 8px; }

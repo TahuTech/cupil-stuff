@@ -41,20 +41,6 @@ function pesanTiket(t, apiUrl) {
   return baris.join("\n");
 }
 
-/** u: { id, jenis, bintang, nama_tampil, ringkas } → "ulasan baru menunggu persetujuan". */
-function pesanUlasanBaru(u, apiUrl) {
-  const bintang = "⭐".repeat(Math.max(1, Math.min(5, u.bintang || 0)));
-  const baris = [
-    "📝 Ulasan baru menunggu persetujuan",
-    (u.jenis === "servis" ? "Servis" : "Produk") + " · " + bintang + " (" + (u.bintang || 0) + "/5)",
-    "Dari: " + (u.nama_tampil || "Anonim") + (u.terverifikasi ? " (pembeli terverifikasi)" : ""),
-  ];
-  if (u.ringkas) baris.push("“" + u.ringkas + "”");
-  const link = linkAdmin(apiUrl, "ulasan", u.id);
-  if (link) baris.push(link);
-  return baris.join("\n");
-}
-
 /** Kirim pesan. Hasil true jika terkirim; false jika dilewati atau gagal (tanpa melempar galat). */
 function kirim(teks) {
   try {
@@ -80,4 +66,4 @@ function kirim(teks) {
   }
 }
 
-module.exports = { linkAdmin, pesanPesanan, pesanTiket, pesanUlasanBaru, kirim };
+module.exports = { linkAdmin, pesanPesanan, pesanTiket, kirim };

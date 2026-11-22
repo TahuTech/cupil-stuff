@@ -89,8 +89,12 @@ routerAdd(
       try {
         let items = [];
         try { items = JSON.parse(sumber.getString("items") || "[]"); } catch (_) {}
-        // ulasan produk: pakai produk pertama di pesanan (form hanya untuk satu produk utama)
-        if (items.length && items[0].produk) produkId = items[0].produk;
+        // items.produk = KODE produk (bukan id); cari id-nya. Pesanan bisa punya banyak produk:
+        // ulasan dari link ini untuk produk PERTAMA di pesanan.
+        if (items.length && items[0].produk) {
+          const rp = e.app.findFirstRecordByData("produk", "kode", items[0].produk);
+          if (rp) produkId = rp.id;
+        }
       } catch (_) {}
     } else {
       jasaId = sumber.getString("jasa") || null;

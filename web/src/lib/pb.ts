@@ -249,7 +249,9 @@ export async function ambilPortofolio(): Promise<Portofolio[]> {
 
 // Hanya ulasan dengan status "tampil" yang boleh dibaca publik; aturan ini juga ditegakkan
 // di server (listRule/viewRule koleksi ulasan).
-// `field` membatasi field pribadi yang dikirim ke publik (tanpa relasi pesanan/tiket & token).
+// `field` membatasi field yang dikirim ke publik: TANPA relasi pesanan/tiket asal & tanpa token,
+// supaya data pribadi / tautan sekali-pakai tidak pernah ikut terkirim ke browser.
+const FIELD_ULASAN = "id,jenis,produk,jasa,bintang,komentar,foto,nama_tampil,sumber,terverifikasi,unggulan";
 
 /**
  * Ambil ulasan yang tampil dari PocketBase.
@@ -268,7 +270,7 @@ export async function ambilUlasan(
   else if (pilihan.jasa) filter += ` && jasa='${pilihan.jasa}'`;
   q.set("filter", filter);
   q.set("sort", "created");
-  const rec = await ambilSemua("ulasan", Object.fromEntries(q.entries()));
+  const rec = await ambilSemua("ulasan", { ...Object.fromEntries(q.entries()), fields: FIELD_ULASAN });
   let hasil = rec.map((u) => ({
     id: u.id,
     jenis: u.jenis,

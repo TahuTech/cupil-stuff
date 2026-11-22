@@ -15,7 +15,8 @@ migrate((app) => {
   const ulasan = new Collection({
     type: "base",
     name: "ulasan",
-    // publik hanya melihat ulasan yang tampil; tanpa menyertakan relasi pesanan/tiket asal
+    // publik hanya melihat ulasan yang tampil, dan hanya field tampilan (tanpa relasi
+    // pesanan/tiket asal, token, dan data pribadi). Lihat responsPublik di pb_hooks/ulasan.js.
     listRule: "status = 'tampil'",
     viewRule: "status = 'tampil'",
     createRule: null, // hanya route /api/ulasan atau panel admin

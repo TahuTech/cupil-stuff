@@ -36,8 +36,9 @@ function linkUlasanWA(p, opsi) {
   const hasil = { link_wa_ulasan: "" };
   const wa = String(p.wa || "").replace(/\D/g, "");
   if (!wa || !p.token) return hasil;
-  const halo = "Halo " + (p.nama || "Kak") + ",\n\n";
   const tautan = B.tautanSitus(opsi.situs, "/ulasan?t=" + encodeURIComponent(p.token));
+  if (!tautan) return hasil; // SITE_URL belum diisi: tidak ada tautan (tidak ada domain di kode)
+  const halo = "Halo " + (p.nama || "Kak") + ",\n\n";
   let pesan;
   if (p.jenis === "tiket") {
     pesan = halo + "Terima kasih sudah servis di " + opsi.toko + " 🙏\n\nBoleh minta waktu sebentar untuk menulis ulasan pengalamanmu? " +
@@ -55,6 +56,25 @@ function labelJenis(jenis) {
   return jenis === "servis" ? "ulasan servis" : "ulasan produk";
 }
 
+/**
+ * Pesan Telegram "ulasan baru menunggu persetujuan". Dipakai notifikasi.pb.js.
+ * u: { id, jenis, bintang, nama_tampil, terverifikasi, ringkas }, apiUrl: alamat PocketBase publik.
+ */
+function pesanUlasanBaru(u, apiUrl) {
+  const penuh = Math.max(1, Math.min(5, u.bintang || 0));
+  const bintang = "⭐".repeat(penuh);
+  const baris = [
+    "📝 Ulasan baru menunggu persetujuan",
+    labelJenis(u.jenis) + " · " + bintang + " (" + (u.bintang || 0) + "/5)",
+    "Dari: " + (u.nama_tampil || "Anonim") + (u.terverifikasi ? " (pembeli terverifikasi)" : ""),
+  ];
+  if (u.ringkas) baris.push("“" + u.ringkas + "”");
+  if (apiUrl) {
+    baris.push(String(apiUrl).replace(/\/+$/, "") + "/_/#/collections?collection=ulasan&record=" + encodeURIComponent(u.id));
+  }
+  return baris.join("\n");
+}
+
 module.exports = {
   STATUS_LAYAK_PESANAN,
   STATUS_LAYAK_TIKET,
@@ -62,4 +82,5 @@ module.exports = {
   tokenUntuk,
   linkUlasanWA,
   labelJenis,
+  pesanUlasanBaru,
 };

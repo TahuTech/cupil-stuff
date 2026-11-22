@@ -44,13 +44,15 @@ web/                        proyek Astro
 | `/keranjang` | Keranjang (localStorage: id varian, jumlah, warna), ongkir per provinsi, form checkout |
 | `/pesanan-berhasil` | Hasil checkout: maskot senang, nomor, rincian dari server, QRIS bernominal (kecuali ongkir perlu konfirmasi), tombol kirim bukti bayar |
 | `/bayar` | Halaman cek dan bayar pesanan: masukkan nomor pesanan + 4 digit terakhir WA, tampil rincian + QRIS bernominal (atau resi jika sudah dikirim) |
-| `/servis` | Jasa servis: daftar jasa aktif (nama, perangkat, harga mulai, estimasi), portofolio sebelum/sesudah (disembunyikan jika kosong), aturan (tanpa DP, bayar penuh setelah selesai, cek gratis, tolak estimasi hanya bayar ongkir kirim balik, boleh antar dan ambil langsung), form buka tiket |
+| `/servis` | Jasa servis: daftar jasa aktif (nama, perangkat, harga mulai, estimasi), portofolio sebelum/sesudah (disembunyikan jika kosong), ulasan servis + tautan ke `/hasil-servis`, aturan (tanpa DP, bayar penuh setelah selesai, cek gratis, tolak estimasi hanya bayar ongkir kirim balik, boleh antar dan ambil langsung), form buka tiket |
+| `/hasil-servis` | Galeri portofolio sebelum/sesudah (filter mouse/keyboard) dan ulasan servis |
+| `/ulasan` | Form ulasan dari tautan khusus (`?t=TOKEN`): bintang, komentar, foto, nama tampil, izin tampil. Token divalidasi server (`POST /api/ulasan`) |
 | `/cek-tiket` | Cek status tiket servis (nomor tiket + 4 digit terakhir WA): urutan langkah status, estimasi + tombol setuju/tolak, tagihan dari server + QRIS bernominal |
 | `/404` | Halaman tidak ditemukan dengan maskot |
 
 Link "kembali ke katalog" selalu ke `/katalog`, bukan `/`.
 
-Build memakai `build.format: "file"` (`/katalog` → `katalog.html`). Route API khusus: `POST /api/checkout` (`pb_hooks/checkout.pb.js`), `GET /api/pesanan/{nomor}?wa=XXXX` (`pb_hooks/pesanan.api.pb.js`), `POST /api/servis` (`pb_hooks/servis.pb.js`), `GET /api/tiket/{nomor}?wa=XXXX` (`pb_hooks/tiket.pb.js`); CORS diatur lewat `PB_ORIGINS` (flag `--origins` di compose).
+Build memakai `build.format: "file"` (`/katalog` → `katalog.html`). Route API khusus: `POST /api/checkout` (`pb_hooks/checkout.pb.js`), `GET /api/pesanan/{nomor}?wa=XXXX` (`pb_hooks/pesanan.api.pb.js`), `POST /api/servis` (`pb_hooks/servis.pb.js`), `GET /api/tiket/{nomor}?wa=XXXX` (`pb_hooks/tiket.pb.js`), `POST /api/ulasan` (`pb_hooks/ulasan.api.pb.js`); CORS diatur lewat `PB_ORIGINS` (flag `--origins` di compose).
 
 ## Data (koleksi PocketBase)
 
@@ -62,8 +64,9 @@ Build memakai `build.format: "file"` (`/katalog` → `katalog.html`). Route API 
 - `jasa`: kode (`SRV-001`), nama, perangkat, deskripsi, harga_mulai, estimasi, aktif
 - `tiket_servis`: nomor (`SRV-YYMMDD-XXXX`), jasa, nama, wa (`628…`), perangkat_jenis (`mouse` | `keyboard` | `lainnya`), perangkat (merek/tipe), keluhan, foto[] (maks 5, maks 5 MB per foto, dikecilkan di browser), cara_kirim (`kurir` | `antar`), provinsi (tujuan kirim balik, wajib jika kurir), estimasi_biaya, biaya_final, ongkir_kirim_balik (otomatis), total_tagihan (otomatis), resi, link_wa_diterima / link_wa_estimasi / link_wa_selesai / link_wa_resi (otomatis), status (`menunggu_perangkat` | `diterima` | `dicek` | `menunggu_persetujuan` | `dikerjakan` | `selesai` | `dikirim` | `dikembalikan`)
 - `portofolio`: judul, foto_sebelum, foto_sesudah, keterangan
+- `ulasan`: jenis (`produk` | `servis`), produk (relasi, opsional), jasa (relasi, opsional), pesanan/tiket asal (relasi, opsional), bintang 1–5, komentar (maks 500), foto[] (maks 3), nama_tampil, sumber (`situs` | `whatsapp` | `marketplace` | `lainnya`), terverifikasi (bool, hanya true jika dari link khusus), token (token link yang dipakai), status (`menunggu` | `tampil` | `disembunyikan`), izin_tampil (bool), unggulan (bool; tampil di "Kata pembeli" landing)
 
-Aturan akses: katalog publik bisa dibaca (hanya `aktif = true`). `pesanan` dan `tiket_servis` **tidak boleh** dibuat lewat API koleksi biasa. Keduanya dibuat lewat route khusus di `pb_hooks` yang menghitung harga dan ongkir di server, karena isian dari browser tidak bisa dipercaya.
+Aturan akses: katalog publik bisa dibaca (hanya `aktif = true`). `pesanan` dan `tiket_servis` **tidak boleh** dibuat lewat API koleksi biasa. Keduanya dibuat lewat route khusus di `pb_hooks` yang menghitung harga dan ongkir di server, karena isian dari browser tidak bisa dipercaya. `ulasan` hanya bisa dibuat lewat route `POST /api/ulasan` (dari link khusus) atau oleh pemilik di panel admin; publik hanya melihat `status = 'tampil'` dan hanya field tampilan (tanpa relasi pesanan/tiket asal & token).
 
 ## Aturan bisnis
 
@@ -99,6 +102,14 @@ Stok EDC dipakai bersama dengan marketplace dan diperbarui manual oleh pemilik. 
 - Alur status tiket: `menunggu_perangkat` (tiket dibuat) → `diterima` → `dicek` → `menunggu_persetujuan` (estimasi diisi pemilik) → `dikerjakan` → `selesai` (biaya final + QRIS) → `dikirim`. Jika ditolak: `dikembalikan` (+ ongkir kirim balik).
 - `GET /api/tiket` HANYA mengembalikan status, nama jasa, perangkat, estimasi, biaya final, ongkir kirim balik, tagihan, dan tanggal (`responsPublik` di `servis.js`, punya unit test). Jangan pernah menambahkan nama, WA, keluhan, foto, atau provinsi.
 - Cek 4 digit WA (`/api/tiket`, `/api/pesanan`) dibatasi 5 kali gagal per 15 menit per IP (`cekwa.js`). IP diambil dari header `CF-Connecting-IP` (kunci PocketBase: `cf_connecting_ip`); `X-Forwarded-For` tidak dipercaya.
+
+### Ulasan
+
+- **Tautan khusus**: saat `pesanan.status_kirim` = `dikirim`/`selesai` atau `tiket_servis.status` = `dikirim`, hook (`ulasan.wa.js` lewat `pesanan.wa.turunan.js`/`tiket.turunan.js`) membuat `token_ulasan` (32 karakter acak) dan `link_wa_ulasan` (wa.me ke `/ulasan?t=TOKEN`). Token berlaku **30 hari** dan **sekali pakai**; `POST /api/ulasan` menolak token yang sudah dipakai, kedaluwarsa, atau record yang tidak lagi layak.
+- **Validasi server** (`ulasan.js`): bintang 1–5 bulat, komentar maks 500, nama_tampil maks 60, foto maks 3 (maks 5 MB). Ulasan dari link = `terverifikasi = true`, `status = menunggu`, `sumber = situs`. Rate limit per IP (`kuota.js` `ulasan`: 5 dibuat + 20 percobaan/jam).
+- **Ulasan manual**: pemilik menambah dari panel admin dengan `sumber` selain `situs` dan `terverifikasi = false`.
+- **Tampilan**: publik hanya melihat `status = tampil` (`listRule`/`viewRule` + `fields` di `ambilUlasan`). Label "Pembeli terverifikasi" hanya untuk `terverifikasi = true`, selain itu label sumbernya ("via WhatsApp", "dari marketplace"). Rata-rata bintang hanya tampil bila ≥ 3 ulasan. `ulasan` memicu build ulang (main.pb.js). Foto dari R2/CDN, lazy-load.
+- **Notifikasi**: `notifikasi.pb.js` mengirim "ulasan baru menunggu persetujuan" ke Telegram (lewat `ulasan.wa.js` → `telegram.js`).
 
 ## Konvensi
 

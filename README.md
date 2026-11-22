@@ -230,6 +230,33 @@ Cara memproses tiket (panel admin `api.cupilstuff.web.id/_/`, koleksi **tiket_se
 
 Ongkir kirim balik dihitung dari zona provinsi customer dan berat bawaan perangkat (`BERAT_PERANGKAT` di `pocketbase/pb_hooks/servis.js`). Jika provinsi tidak punya zona, nilainya 0: isi `ongkir_kirim_balik` secara manual (nilai manual tidak ditimpa, kecuali cara kirim/provinsi/jenis perangkat diubah). Alamat kirim dan info antar ada di `web/src/config.ts` (`SERVIS`). Di `.env` homelab, isi `SITE_URL` agar tautan `/cek-tiket` di pesan WhatsApp mengarah ke domain katalog.
 
+## Ulasan pembeli
+
+Ulasan produk dan servis dikumpulkan lewat **tautan khusus** yang dikirim pemilik ke pembeli, lalu ditampilkan setelah disetujui.
+
+### Meminta ulasan
+
+1. **Pesanan**: setelah pesanan diubah ke `status_kirim` = `dikirim` (atau `selesai`), field `token_ulasan` dan `link_wa_ulasan` terisi otomatis. Klik `link_wa_ulasan` untuk membuka WhatsApp dengan pesan permintaan ulasan + tautan `/ulasan?t=TOKEN`.
+2. **Tiket servis**: setelah status tiket = `dikirim`, `token_ulasan` dan `link_wa_ulasan` terisi otomatis. Sama seperti pesanan, buka `link_wa_ulasan`.
+
+Token berlaku **30 hari** dan **sekali pakai** (sekali ulasan masuk, token tidak bisa dipakai lagi). Tautan juga otomatis mati bila status record berubah (mis. pesanan dikembalikan ke `diproses`).
+
+### Halaman /ulasan
+
+Pembeli membuka `/ulasan?t=TOKEN`, mengisi bintang (1–5), komentar (maks 500), foto (maks 3, dikecilkan di browser), nama tampil, dan mencentang izin tampil. Ulasan dari tautan ini **terverifikasi** (`terverifikasi = true`). `POST /api/ulasan` memvalidasi token (ada, belum dipakai, belum kedaluwarsa, status record layak) dan menyimpan ulasan dengan status **menunggu** + notifikasi Telegram ke pemilik.
+
+### Menyetujui ulasan
+
+Buka panel admin → koleksi **ulasan** → ubah `status` dari `menunggu` ke `tampil` (atau `disembunyikan`). Saat disetujui, katalog di-build ulang otomatis dan ulasan muncul di:
+
+- **landing** (`/`): bagian "Kata pembeli" berisi ulasan dengan `unggulan = true` (maks. 4); disembunyikan bila kosong.
+- **halaman produk** (`/produk/[kode]`): ulasan untuk produk itu.
+- **/servis** dan **/hasil-servis**: ulasan servis (rata-rata bintang hanya tampil bila ≥ 3 ulasan).
+
+### Ulasan manual
+
+Pemilik bisa menambah ulasan langsung dari panel admin (koleksi **ulasan**, `createRule` terbuka untuk admin). Isi `jenis`, `bintang`, `komentar`, `nama_tampil`, dan `sumber` (`whatsapp` / `marketplace` / `lainnya`) — `terverifikasi` biarkan **false**. Di tampilan, ulasan tak terverifikasi diberi label sumbernya ("via WhatsApp", "dari marketplace", dst.), sedangkan yang terverifikasi diberi label "Pembeli terverifikasi".
+
 ## Data uji dan database produksi
 
 **Database produksi dimulai kosong.** Jangan menyalin folder `pocketbase/pb_data` dari komputer development ke homelab. Saat PocketBase produksi pertama kali jalan, migrasi membuat semua koleksi dan 6 zona ongkir; kategori, produk, varian, jasa, dan portofolio diisi pemilik lewat panel admin. `scripts/seed-dev.mjs` dan `scripts/bersihkan-data-uji.mjs` hanya untuk lokal.
@@ -249,6 +276,7 @@ Skrip menampilkan jumlah dan contoh nomor yang akan dihapus, lalu meminta kamu m
 - [x] Tahap 3: keranjang, ongkir per zona, checkout (`POST /api/checkout`, hitung ulang di server), QRIS nominal otomatis, pesanan tersimpan
 - [x] Tahap 4: konfirmasi bayar, stok otomatis, ongkir manual, link WA, halaman /bayar
 - [x] Tahap 5: halaman jasa servis, form + nomor tiket (`POST /api/servis`), cek status (`GET /api/tiket`), tagihan + ongkir kirim balik dihitung di server, QRIS, link WA pemilik
+- [x] Ulasan pembeli: koleksi ulasan, tautan khusus sekali pakai (`/ulasan?t=TOKEN`, `POST /api/ulasan`), ulasan manual, tampilan di landing/produk/servis + halaman `/hasil-servis`
 - [x] Mode WhatsApp saat homelab mati: deteksi `/api/health` (timeout 3 detik, cache 60 detik), keranjang/servis/cek tiket/bayar beralih ke WhatsApp, banner di halaman terdampak
 
 ## Catatan

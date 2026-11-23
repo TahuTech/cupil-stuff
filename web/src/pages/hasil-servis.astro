@@ -18,11 +18,11 @@ function jenisPortofolio(p: { judul: string; keterangan: string }): "mouse" | "k
 }
 const portofolioBerjenis = portofolio.map((p) => ({ ...p, jenis: jenisPortofolio(p) }));
 ---
-<Base judul="Hasil servis" deskripsi={`Galeri servis mouse dan keyboard mechanical di ${TOKO.kota}, sebelum dan sesudah.`}>
+<Base judul="Hasil servis" deskripsi={`Galeri servis mouse, keyboard & controller di ${TOKO.kota}, sebelum dan sesudah.`}>
   <section class="judul">
     <p class="kembali"><a href="/servis">← Servis</a></p>
     <h1>Hasil servis</h1>
-    <p>Portofolio perbaikan mouse dan keyboard mechanical. Sebelum dan sesudah dikerjakan.</p>
+    <p>Portofolio perbaikan mouse, keyboard, dan controller. Sebelum dan sesudah dikerjakan.</p>
   </section>
 
   {portofolioBerjenis.length > 0 && (

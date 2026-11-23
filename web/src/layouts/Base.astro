@@ -10,11 +10,19 @@ interface Props {
   pakai3D?: boolean;
   canonical?: string;
 }
-const { judul, deskripsi = TOKO.tagline, gambar, pakai3D = false, canonical } = Astro.props;
+const { judul, deskripsi = TOKO.deskripsiSEO, gambar, pakai3D = false, canonical } = Astro.props;
 // build.format "file": pathname bisa berakhiran .html (mis. /katalog.html)
 const jalur = Astro.url.pathname.replace(/\.html$/, "").replace(/\/$/, "");
 const aktif = (href: string) => (jalur === href || jalur.startsWith(`${href}/`) ? "page" : undefined);
 const judulLengkap = judul ? `${judul} · ${TOKO.nama}` : `${TOKO.nama} · ${TOKO.tagline}`;
+
+// Ikon kecil per marketplace (tampil di footer sebelum nama toko). SVG inline biar tak tergantung jaringan.
+// Pendekatan warna/logo resmi; bentuk speech bubble dipakai semua marketplace.
+const LOGO_MARKETPLACE: Record<string, string> = {
+  toco: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a9 9 0 0 1 9 9 9 9 0 0 1-9 9H9l-4 3 1-4a9 9 0 0 1-6-8 9 9 0 0 1 9-9z" fill="#FFD400"/><text x="12" y="16.2" text-anchor="middle" font-family="Arial, sans-serif" font-size="13" font-weight="800" fill="#0B378E">T</text></svg>',
+  shopee: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a9 9 0 0 1 9 9 9 9 0 0 1-9 9H9l-4 3 1-4a9 9 0 0 1-6-8 9 9 0 0 1 9-9z" fill="#EE4D2D"/><text x="12" y="16.2" text-anchor="middle" font-family="Arial, sans-serif" font-size="13" font-weight="700" fill="#fff">S</text></svg>',
+  tokopedia: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a9 9 0 0 1 9 9 9 9 0 0 1-9 9H9l-4 3 1-4a9 9 0 0 1-6-8 9 9 0 0 1 9-9z" fill="#00AA5B"/><text x="12" y="16.2" text-anchor="middle" font-family="Arial, sans-serif" font-size="13" font-weight="800" fill="#fff">T</text></svg>',
+};
 ---
 <!doctype html>
 <html lang="id">
@@ -105,6 +113,19 @@ const judulLengkap = judul ? `${judul} · ${TOKO.nama}` : `${TOKO.nama} · ${TOK
             <svg class="ikon-wa" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.4 8.4 0 0 1-12.4 7.4L3 21l2.1-5.4A8.4 8.4 0 1 1 21 11.5z" /></svg>
             Hubungi via WhatsApp
           </a>
+          {TOKO.marketplace.length > 0 && (
+            <div class="footer-mp">
+              <b>Juga di marketplace</b>
+              <nav aria-label="Marketplace">
+                {TOKO.marketplace.map((m) => (
+                  <a href={m.url} target="_blank" rel="noopener">
+                    {m.logo && <span class="mp-logo" aria-hidden="true" set:html={LOGO_MARKETPLACE[m.logo] || ""} />}
+                    {m.nama}
+                  </a>
+                ))}
+              </nav>
+            </div>
+          )}
         </div>
       </div>
       <p class="footer-bawah">© {new Date().getFullYear()} {TOKO.nama} · {TOKO.kota} · Aktif sejak {TOKO.berdiriSejak}</p>
@@ -226,6 +247,13 @@ const judulLengkap = judul ? `${judul} · ${TOKO.nama}` : `${TOKO.nama} · ${TOK
   .footer-aksi { display: flex; flex-direction: column; gap: 10px; }
   .footer-wa { display: inline-flex; align-items: center; gap: 8px; white-space: nowrap; }
   .footer-wa .ikon-wa { width: 20px; height: 20px; }
+  .footer-mp { display: flex; flex-direction: column; gap: 6px; font-size: 0.9rem; }
+  .footer-mp b { color: var(--muted); font-weight: 600; font-size: 0.85rem; }
+  .footer-mp nav { display: flex; flex-direction: column; gap: 6px; }
+  .footer-mp a { display: inline-flex; align-items: center; gap: 8px; color: var(--text); text-decoration: none; }
+  .footer-mp a:hover { color: var(--brand); }
+  .mp-logo { width: 18px; height: 18px; flex: none; border-radius: 4px; overflow: hidden; }
+  .mp-logo :global(svg) { width: 100%; height: 100%; display: block; }
   .footer-bawah {
     margin: 0; padding: 16px 20px; text-align: center; border-top: 1px solid var(--line);
     font-size: 0.85rem; color: var(--muted);

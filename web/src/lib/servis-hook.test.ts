@@ -100,7 +100,7 @@ describe("ongkirKirimBalik (zona sama, berat bawaan per jenis perangkat, tanpa p
   it("keyboard 900 g ke Papua → 1 kg × 100.000", () => expect(S.ongkirKirimBalik("kurir", "Papua", "keyboard", ZONA)).toBe(100_000));
   it("Kota Surabaya → 8.000", () => expect(S.ongkirKirimBalik("kurir", "Kota Surabaya", "lainnya", ZONA)).toBe(8_000));
   it("provinsi tanpa zona → null (diisi manual)", () => expect(S.ongkirKirimBalik("kurir", "Atlantis", "mouse", ZONA)).toBeNull());
-  it("berat bawaan sesuai config", () => expect(S.BERAT_PERANGKAT).toEqual({ mouse: 300, keyboard: 900, lainnya: 500 }));
+  it("berat bawaan sesuai config", () => expect(S.BERAT_PERANGKAT).toEqual({ mouse: 300, keyboard: 900, controller: 700, lainnya: 500 }));
 });
 
 describe("hitungTagihan: selesai/dikembalikan × kurir/antar", () => {
